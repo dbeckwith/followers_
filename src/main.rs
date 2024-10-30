@@ -17,6 +17,8 @@ struct Model {
     window_id: WindowId,
     egui: Egui,
     particles: Vec<Particle>,
+    positions: Vec<Vec2>,
+    velocities: Vec<Vec2>,
     image: DynamicImage,
 }
 
@@ -26,8 +28,6 @@ const NUM_PARTNERS: usize = 2;
 struct Particle {
     idx: usize,
     partners: [usize; NUM_PARTNERS],
-    pos: Vec2,
-    vel: Vec2,
     color: Hsv,
 }
 
@@ -45,9 +45,9 @@ fn model(app: &App) -> Model {
     let egui = Egui::from_window(&window);
 
     // let seed: u64 = thread_rng().gen();
-    let seed: u64 = 0x10f5bb69e5e71738;
+    let seed: u64 = 0x1c39bff01c85b97e;
     eprintln!("SEED: 0x{seed:016x}");
-    let mut rng = ChaCha20Rng::seed_from_u64(0);
+    let mut rng = ChaCha20Rng::seed_from_u64(seed);
     let num_particles = 1000;
     assert!(num_particles > NUM_PARTNERS);
     let particles = (0..num_particles)
@@ -65,18 +65,24 @@ fn model(app: &App) -> Model {
                 }
                 [j, k]
             },
-            pos: {
-                let t = map_range(idx, 0, num_particles - 1, 0.0, 2.0 * PI);
-                let r = rng.gen_range(0.0..=100.0);
-                Vec2::new(r * t.cos(), r * t.sin())
-            },
-            vel: Vec2::new(0.0, 0.0),
             color: hsv(
                 rng.gen_range(0.0 / 360.0..=60.0 / 360.0),
                 rng.gen_range(0.20..=0.40),
                 0.60,
             ),
         })
+        .collect::<Vec<_>>();
+
+    let positions = (0..num_particles)
+        .map(|idx| {
+            let t = map_range(idx, 0, num_particles - 1, 0.0, 2.0 * PI);
+            let r = rng.gen_range(0.0..=100.0);
+            Vec2::new(r * t.cos(), r * t.sin())
+        })
+        .collect::<Vec<_>>();
+
+    let velocities = (0..num_particles)
+        .map(|_idx| Vec2::new(0.0, 0.0))
         .collect::<Vec<_>>();
 
     let image = DynamicImage::new_rgba8(
@@ -88,6 +94,8 @@ fn model(app: &App) -> Model {
         window_id,
         egui,
         particles,
+        positions,
+        velocities,
         image,
     }
 }
@@ -106,6 +114,8 @@ fn event(
         window_id,
         egui,
         particles,
+        positions,
+        velocities,
         image,
     }: &mut Model,
     event: WindowEvent,
@@ -147,6 +157,8 @@ fn update(
         window_id,
         egui,
         particles,
+        positions,
+        velocities,
         image,
     }: &mut Model,
     update: Update,
@@ -155,50 +167,41 @@ fn update(
     let gui = egui.begin_frame();
 
     for idx in 0..particles.len() {
+        let pos = positions[idx];
         let [p1, p2] = particles[idx].partners;
-        // SAFETY: particles are initialized with valid partner indexes that are
-        // distinct from each other and the main particle's index
-        let [p, p1, p2] = unsafe {
-            get_many_unchecked_mut(particles.as_mut_slice(), [idx, p1, p2])
-        };
-        let p1 = &*p1;
-        let p2 = &*p2;
+        let p1 = positions[p1];
+        let p2 = positions[p2];
+        let vel = &mut velocities[idx];
 
-        let t = (p.pos - p1.pos).dot(p2.pos - p1.pos)
-            / p2.pos.distance_squared(p1.pos);
+        let t = (pos - p1).dot(p2 - p1) / p2.distance_squared(p1);
         let t = t.max(1.0);
-        let target_pos = p2.pos * t + p1.pos * (1.0 - t);
+        let target_pos = p2 * t + p1 * (1.0 - t);
 
-        let acc = target_pos - p.pos;
+        let acc = target_pos - pos;
         let acc = acc.clamp_length_max(0.5);
-        p.vel += acc;
-        p.vel = p.vel.clamp_length_max(1.0);
+        *vel += acc;
+        *vel = vel.clamp_length_max(1.0);
     }
 
-    for p in particles.iter_mut() {
-        p.pos += p.vel;
+    for idx in 0..particles.len() {
+        positions[idx] += velocities[idx];
     }
 
-    for particle in particles {
-        particle.render(image);
-    }
-}
-
-impl Particle {
-    fn render(&self, image: &mut DynamicImage) {
+    for p in particles {
+        let pos = positions[p.idx];
         let w = image.width();
         let h = image.height();
-        let x = self.pos.x + w as f32 / 2.0;
-        let y = self.pos.y + h as f32 / 2.0;
+        let x = pos.x + w as f32 / 2.0;
+        let y = pos.y + h as f32 / 2.0;
         if x < 0.0 || x >= w as f32 || y < 0.0 || y >= h as f32 {
             return;
         }
         let x = x as u32;
         let y = y as u32;
         let (r, g, b, a) = Rgba::from(Hsva::new(
-            self.color.hue,
-            self.color.saturation,
-            self.color.value,
+            p.color.hue,
+            p.color.saturation,
+            p.color.value,
             0.06,
         ))
         .into_components();
@@ -221,6 +224,8 @@ fn view(
         window_id,
         egui,
         particles,
+        positions,
+        velocities,
         image,
     }: &Model,
     frame: Frame<'_>,
@@ -232,26 +237,4 @@ fn view(
 
     draw.to_frame(app, &frame).unwrap();
     egui.draw_to_frame(&frame).unwrap();
-}
-
-/// safety: indexes must be in-bounds and distinct
-// based on https://github.com/rust-lang/rust/blob/1.79.0/library/core/src/slice/mod.rs#L4460
-unsafe fn get_many_unchecked_mut<const N: usize, T>(
-    self_: &mut [T],
-    indices: [usize; N],
-) -> [&mut T; N] {
-    use std::mem::MaybeUninit;
-    let slice: *mut T = self_.as_mut_ptr();
-    let mut arr: MaybeUninit<[&mut T; N]> = MaybeUninit::uninit();
-    let arr_ptr = arr.as_mut_ptr();
-
-    // SAFETY: We expect `indices` to contain disjunct values that are
-    // in bounds of `self`.
-    unsafe {
-        for i in 0..N {
-            let idx = *indices.get_unchecked(i);
-            *(*arr_ptr).get_unchecked_mut(i) = &mut *slice.add(idx);
-        }
-        arr.assume_init()
-    }
 }
