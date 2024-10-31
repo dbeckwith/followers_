@@ -115,8 +115,8 @@ fn model(app: &App) -> Model {
         .collect::<Vec<_>>());
 
     let image = DynamicImage::new_rgba8(
-        app.main_window().rect().w() as u32,
-        app.main_window().rect().h() as u32,
+        window.rect().w() as u32,
+        window.rect().h() as u32,
     );
 
     Model {
@@ -153,6 +153,7 @@ fn event(
     }: &mut Model,
     event: WindowEvent,
 ) {
+    let window = app.window(*window_id).unwrap();
     let gui = egui.ctx();
     if gui.wants_pointer_input() {
         match &event {
