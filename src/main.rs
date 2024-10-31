@@ -2,7 +2,7 @@
 #![deny(clippy::correctness)]
 
 use nannou::{
-    image::{DynamicImage, GenericImage, GenericImageView},
+    image::{DynamicImage, GenericImage, GenericImageView, Pixel},
     prelude::*,
 };
 use nannou_egui::Egui;
@@ -140,20 +140,19 @@ fn raw_event(
 }
 
 fn event(
-    app: &App,
+    _app: &App,
     Model {
-        window_id,
+        window_id: _,
         egui,
         params,
-        positions,
-        velocities,
-        partners,
-        colors,
+        positions: _,
+        velocities: _,
+        partners: _,
+        colors: _,
         image,
     }: &mut Model,
     event: WindowEvent,
 ) {
-    let window = app.window(*window_id).unwrap();
     let gui = egui.ctx();
     if gui.wants_pointer_input() {
         match &event {
@@ -182,18 +181,27 @@ fn event(
                 particle_count,
                 seed,
             } = params;
-            app.main_window().capture_frame(format!(
-                "out/{particle_count}-0x{seed:016x}.png"
-            ));
+            let path = format!("out/{particle_count}-0x{seed:016x}.png");
+            eprintln!("saving image to {path}");
+            let mut image = image.to_rgba8();
+            let background = Hsva::new(0.0 / 360.0, 0.00, 0.00, 1.00);
+            for px in image.pixels_mut() {
+                let px_ = *px;
+                *px = hsva_to_image_rgba(background);
+                px.blend(&px_);
+            }
+            if let Err(error) = image.save(&path) {
+                eprintln!("error saving image to {path}: {error}");
+            }
         },
         event => {},
     }
 }
 
 fn update(
-    app: &App,
+    _app: &App,
     Model {
-        window_id,
+        window_id: _,
         egui,
         params,
         positions,
@@ -241,37 +249,22 @@ fn update(
         let y = y as u32;
 
         let color = colors[idx];
-        let (r, g, b, a) = Rgba::from(Hsva::new(
-            color.hue,
-            color.saturation,
-            color.value,
-            0.06,
-        ))
-        .into_components();
+        let color = Hsva::new(color.hue, color.saturation, color.value, 0.06);
 
-        image.blend_pixel(
-            x,
-            y,
-            nannou::image::Rgba([
-                (r * 255.0) as u8,
-                (g * 255.0) as u8,
-                (b * 255.0) as u8,
-                (a * 255.0) as u8,
-            ]),
-        );
+        image.blend_pixel(x, y, hsva_to_image_rgba(color));
     }
 }
 
 fn view(
     app: &App,
     Model {
-        window_id,
+        window_id: _,
         egui,
-        params,
-        positions,
-        velocities,
-        partners,
-        colors,
+        params: _,
+        positions: _,
+        velocities: _,
+        partners: _,
+        colors: _,
         image,
     }: &Model,
     frame: Frame<'_>,
@@ -283,4 +276,14 @@ fn view(
 
     draw.to_frame(app, &frame).unwrap();
     egui.draw_to_frame(&frame).unwrap();
+}
+
+fn hsva_to_image_rgba(hsva: Hsva) -> nannou::image::Rgba<u8> {
+    let (r, g, b, a) = Rgba::from(hsva).into_components();
+    nannou::image::Rgba([
+        (r * 255.0) as u8,
+        (g * 255.0) as u8,
+        (b * 255.0) as u8,
+        (a * 255.0) as u8,
+    ])
 }
