@@ -65,59 +65,54 @@ fn model(app: &App) -> Model {
     let mut seeds = ChaCha20Rng::seed_from_u64(seed)
         .sample_iter(rand::distributions::Standard);
 
-    let positions = {
-        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
-        params
-            .idxs()
-            .map(|idx| {
-                let t =
-                    map_range(idx, 0, params.particle_count - 1, 0.0, 2.0 * PI);
-                let r = rng.gen_range(9.0..=10.0);
-                Vec2::new(r * t.cos(), r * t.sin())
-            })
-            .collect::<Vec<_>>()
-    };
+    macro_rules! with_rng {
+        (| $rng:ident | $body:expr) => {{
+            #[allow(unused, unused_mut)]
+            let mut $rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
+            $body
+        }};
+    }
 
-    let velocities = {
-        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
-        params
-            .idxs()
-            .map(|_idx| Vec2::new(0.0, 0.0))
-            .collect::<Vec<_>>()
-    };
+    let positions = with_rng!(|rng| params
+        .idxs()
+        .map(|idx| {
+            let t = map_range(idx, 0, params.particle_count - 1, 0.0, 2.0 * PI);
+            let r = rng.gen_range(9.0..=10.0);
+            Vec2::new(r * t.cos(), r * t.sin())
+        })
+        .collect::<Vec<_>>());
 
-    let partners = {
-        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
-        params
-            .idxs()
-            .map(|idx| {
-                let i = idx;
-                let mut j = rng.gen_range(params.idxs());
-                while j == i {
-                    j = rng.gen_range(params.idxs());
-                }
-                let mut k = rng.gen_range(params.idxs());
-                while k == i || k == j {
-                    k = rng.gen_range(params.idxs());
-                }
-                [j, k]
-            })
-            .collect::<Vec<_>>()
-    };
+    let velocities = with_rng!(|rng| params
+        .idxs()
+        .map(|_idx| Vec2::new(0.0, 0.0))
+        .collect::<Vec<_>>());
 
-    let colors = {
-        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
-        params
-            .idxs()
-            .map(|_idx| {
-                hsv(
-                    rng.gen_range(0.0 / 360.0..=240.0 / 360.0),
-                    rng.gen_range(0.20..=0.40),
-                    0.80,
-                )
-            })
-            .collect::<Vec<_>>()
-    };
+    let partners = with_rng!(|rng| params
+        .idxs()
+        .map(|idx| {
+            let i = idx;
+            let mut j = rng.gen_range(params.idxs());
+            while j == i {
+                j = rng.gen_range(params.idxs());
+            }
+            let mut k = rng.gen_range(params.idxs());
+            while k == i || k == j {
+                k = rng.gen_range(params.idxs());
+            }
+            [j, k]
+        })
+        .collect::<Vec<_>>());
+
+    let colors = with_rng!(|rng| params
+        .idxs()
+        .map(|_idx| {
+            hsv(
+                rng.gen_range(0.0 / 360.0..=240.0 / 360.0),
+                rng.gen_range(0.20..=0.40),
+                0.80,
+            )
+        })
+        .collect::<Vec<_>>());
 
     let image = DynamicImage::new_rgba8(
         app.main_window().rect().w() as u32,
