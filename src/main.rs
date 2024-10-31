@@ -16,26 +16,44 @@ fn main() {
 struct Model {
     window_id: WindowId,
     egui: Egui,
-    particles: Vec<Particle>,
+    params: Params,
     positions: Vec<Vec2>,
     velocities: Vec<Vec2>,
+    partners: Vec<[usize; 2]>,
+    colors: Vec<Hsv>,
     image: DynamicImage,
 }
 
-const NUM_PARTNERS: usize = 2;
+struct Params {
+    particle_count: usize,
+    seed: u64,
+}
 
-#[derive(Debug)]
-struct Particle {
-    idx: usize,
-    partners: [usize; NUM_PARTNERS],
-    color: Hsv,
+impl Params {
+    fn check(&self) {
+        assert!(self.particle_count > 2);
+    }
+
+    fn idxs(&self) -> std::ops::Range<usize> {
+        0..self.particle_count
+    }
 }
 
 fn model(app: &App) -> Model {
+    let seed: u64 = thread_rng().gen();
+    let seed: u64 = 0xb0ddde9d83a31516;
+    eprintln!("SEED: 0x{seed:016x}");
+
+    let params = Params {
+        particle_count: 1000,
+        seed,
+    };
+    params.check();
+
     let window_id = app
         .new_window()
         .title("FOLLOWERS")
-        .size(800, 500)
+        .size(1920, 1080)
         .view(view)
         .raw_event(raw_event)
         .event(event)
@@ -44,46 +62,62 @@ fn model(app: &App) -> Model {
     let window = app.window(window_id).unwrap();
     let egui = Egui::from_window(&window);
 
-    // let seed: u64 = thread_rng().gen();
-    let seed: u64 = 0x1c39bff01c85b97e;
-    eprintln!("SEED: 0x{seed:016x}");
-    let mut rng = ChaCha20Rng::seed_from_u64(seed);
-    let num_particles = 1000;
-    assert!(num_particles > NUM_PARTNERS);
-    let particles = (0..num_particles)
-        .map(|idx| Particle {
-            idx,
-            partners: {
+    let mut seeds = ChaCha20Rng::seed_from_u64(seed)
+        .sample_iter(rand::distributions::Standard);
+
+    let positions = {
+        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
+        params
+            .idxs()
+            .map(|idx| {
+                let t =
+                    map_range(idx, 0, params.particle_count - 1, 0.0, 2.0 * PI);
+                let r = rng.gen_range(9.0..=10.0);
+                Vec2::new(r * t.cos(), r * t.sin())
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let velocities = {
+        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
+        params
+            .idxs()
+            .map(|_idx| Vec2::new(0.0, 0.0))
+            .collect::<Vec<_>>()
+    };
+
+    let partners = {
+        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
+        params
+            .idxs()
+            .map(|idx| {
                 let i = idx;
-                let mut j = rng.gen_range(0..num_particles);
+                let mut j = rng.gen_range(params.idxs());
                 while j == i {
-                    j = rng.gen_range(0..num_particles);
+                    j = rng.gen_range(params.idxs());
                 }
-                let mut k = rng.gen_range(0..num_particles);
+                let mut k = rng.gen_range(params.idxs());
                 while k == i || k == j {
-                    k = rng.gen_range(0..num_particles);
+                    k = rng.gen_range(params.idxs());
                 }
                 [j, k]
-            },
-            color: hsv(
-                rng.gen_range(0.0 / 360.0..=60.0 / 360.0),
-                rng.gen_range(0.20..=0.40),
-                0.60,
-            ),
-        })
-        .collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>()
+    };
 
-    let positions = (0..num_particles)
-        .map(|idx| {
-            let t = map_range(idx, 0, num_particles - 1, 0.0, 2.0 * PI);
-            let r = rng.gen_range(0.0..=100.0);
-            Vec2::new(r * t.cos(), r * t.sin())
-        })
-        .collect::<Vec<_>>();
-
-    let velocities = (0..num_particles)
-        .map(|_idx| Vec2::new(0.0, 0.0))
-        .collect::<Vec<_>>();
+    let colors = {
+        let mut rng = ChaCha20Rng::seed_from_u64(seeds.next().unwrap());
+        params
+            .idxs()
+            .map(|_idx| {
+                hsv(
+                    rng.gen_range(0.0 / 360.0..=240.0 / 360.0),
+                    rng.gen_range(0.20..=0.40),
+                    0.80,
+                )
+            })
+            .collect::<Vec<_>>()
+    };
 
     let image = DynamicImage::new_rgba8(
         app.main_window().rect().w() as u32,
@@ -93,9 +127,11 @@ fn model(app: &App) -> Model {
     Model {
         window_id,
         egui,
-        particles,
+        params,
         positions,
         velocities,
+        partners,
+        colors,
         image,
     }
 }
@@ -113,9 +149,11 @@ fn event(
     Model {
         window_id,
         egui,
-        particles,
+        params,
         positions,
         velocities,
+        partners,
+        colors,
         image,
     }: &mut Model,
     event: WindowEvent,
@@ -144,8 +182,13 @@ fn event(
     }
     match event {
         WindowEvent::KeyPressed(Key::Space) => {
-            // TODO: save screenshot
-            // app.main_window().capture_frame(path);
+            let Params {
+                particle_count,
+                seed,
+            } = params;
+            app.main_window().capture_frame(format!(
+                "out/{particle_count}-0x{seed:016x}.png"
+            ));
         },
         event => {},
     }
@@ -156,9 +199,11 @@ fn update(
     Model {
         window_id,
         egui,
-        particles,
+        params,
         positions,
         velocities,
+        partners,
+        colors,
         image,
     }: &mut Model,
     update: Update,
@@ -166,9 +211,9 @@ fn update(
     egui.set_elapsed_time(update.since_start);
     let gui = egui.begin_frame();
 
-    for idx in 0..particles.len() {
+    for idx in params.idxs() {
         let pos = positions[idx];
-        let [p1, p2] = particles[idx].partners;
+        let [p1, p2] = partners[idx];
         let p1 = positions[p1];
         let p2 = positions[p2];
         let vel = &mut velocities[idx];
@@ -183,12 +228,12 @@ fn update(
         *vel = vel.clamp_length_max(1.0);
     }
 
-    for idx in 0..particles.len() {
+    for idx in params.idxs() {
         positions[idx] += velocities[idx];
     }
 
-    for p in particles {
-        let pos = positions[p.idx];
+    for idx in params.idxs() {
+        let pos = positions[idx];
         let w = image.width();
         let h = image.height();
         let x = pos.x + w as f32 / 2.0;
@@ -198,13 +243,16 @@ fn update(
         }
         let x = x as u32;
         let y = y as u32;
+
+        let color = colors[idx];
         let (r, g, b, a) = Rgba::from(Hsva::new(
-            p.color.hue,
-            p.color.saturation,
-            p.color.value,
+            color.hue,
+            color.saturation,
+            color.value,
             0.06,
         ))
         .into_components();
+
         image.blend_pixel(
             x,
             y,
@@ -223,16 +271,18 @@ fn view(
     Model {
         window_id,
         egui,
-        particles,
+        params,
         positions,
         velocities,
+        partners,
+        colors,
         image,
     }: &Model,
     frame: Frame<'_>,
 ) {
     let draw = app.draw();
 
-    draw.background().hsv(0.0 / 360.0, 0.00, 1.00);
+    draw.background().hsv(0.0 / 360.0, 0.00, 0.00);
     draw.texture(&wgpu::Texture::from_image(app, image));
 
     draw.to_frame(app, &frame).unwrap();
