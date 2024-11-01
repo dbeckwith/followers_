@@ -8,6 +8,7 @@ use nannou::{
 use nannou_egui::Egui;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
+use std::path::PathBuf;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -181,8 +182,17 @@ fn event(
                 particle_count,
                 seed,
             } = params;
-            let path = format!("out/{particle_count}-0x{seed:016x}.png");
-            eprintln!("saving image to {path}");
+            let path = (1..)
+                .map(|idx| {
+                    PathBuf::from(if idx == 1 {
+                        format!("out/{particle_count}-0x{seed:016x}.png")
+                    } else {
+                        format!("out/{particle_count}-0x{seed:016x}-{idx}.png")
+                    })
+                })
+                .find(|path| !path.exists())
+                .unwrap();
+            eprintln!("saving image to {path:?}");
             let mut image = image.to_rgba8();
             let background = Hsva::new(0.0 / 360.0, 0.00, 0.00, 1.00);
             for px in image.pixels_mut() {
@@ -191,7 +201,7 @@ fn event(
                 px.blend(&px_);
             }
             if let Err(error) = image.save(&path) {
-                eprintln!("error saving image to {path}: {error}");
+                eprintln!("error saving image to {path:?}: {error}");
             }
         },
         event => {},
