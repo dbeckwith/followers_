@@ -5,10 +5,18 @@ use nannou::{
     image::{DynamicImage, GenericImage, GenericImageView, Pixel},
     prelude::*,
 };
-use nannou_egui::Egui;
+use nannou_egui::{egui, Egui};
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
-use std::path::PathBuf;
+use std::{
+    mem,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
+
+static HELP: &str = r#"
+Save Frame: $space$
+"#;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -23,6 +31,7 @@ struct Model {
     partners: Vec<[usize; 2]>,
     colors: Vec<Hsv>,
     image: DynamicImage,
+    notifications: Vec<Notification>,
 }
 
 struct Params {
@@ -37,6 +46,20 @@ impl Params {
 
     fn idxs(&self) -> std::ops::Range<usize> {
         0..self.particle_count
+    }
+}
+
+struct Notification {
+    message: String,
+    creation_time: Instant,
+}
+
+impl Notification {
+    fn new(message: impl ToString) -> Self {
+        Self {
+            message: message.to_string(),
+            creation_time: Instant::now(),
+        }
     }
 }
 
@@ -120,6 +143,8 @@ fn model(app: &App) -> Model {
         window.rect().h() as u32,
     );
 
+    let notifications = Vec::new();
+
     Model {
         window_id,
         egui,
@@ -129,6 +154,7 @@ fn model(app: &App) -> Model {
         partners,
         colors,
         image,
+        notifications,
     }
 }
 
@@ -151,6 +177,7 @@ fn event(
         partners: _,
         colors: _,
         image,
+        notifications,
     }: &mut Model,
     event: WindowEvent,
 ) {
@@ -192,7 +219,6 @@ fn event(
                 })
                 .find(|path| !path.exists())
                 .unwrap();
-            eprintln!("saving image to {path:?}");
             let mut image = image.to_rgba8();
             let background = Hsva::new(0.0 / 360.0, 0.00, 0.00, 1.00);
             for px in image.pixels_mut() {
@@ -200,8 +226,19 @@ fn event(
                 *px = hsva_to_image_rgba(background);
                 px.blend(&px_);
             }
-            if let Err(error) = image.save(&path) {
-                eprintln!("error saving image to {path:?}: {error}");
+            match image.save(&path) {
+                Ok(()) => {
+                    eprintln!("saved image to {path:?}");
+                    notifications.push(Notification::new(format!(
+                        "saved image to ${path:?}$"
+                    )));
+                },
+                Err(error) => {
+                    eprintln!("error saving image to {path:?}: {error}");
+                    notifications.push(Notification::new(format!(
+                        "error saving image to ${path:?}$: ${error}$"
+                    )));
+                },
             }
         },
         event => {},
@@ -219,12 +256,10 @@ fn update(
         partners,
         colors,
         image,
+        notifications,
     }: &mut Model,
     update: Update,
 ) {
-    egui.set_elapsed_time(update.since_start);
-    let gui = egui.begin_frame();
-
     for idx in params.idxs() {
         let pos = positions[idx];
         let [p1, p2] = partners[idx];
@@ -263,6 +298,27 @@ fn update(
 
         image.blend_pixel(x, y, hsva_to_image_rgba(color));
     }
+
+    egui.set_elapsed_time(update.since_start);
+    let gui = egui.begin_frame();
+
+    egui::Window::new("Help").show(&gui, |ui| {
+        egui_rich_text(ui, HELP);
+    });
+
+    *notifications = mem::take(notifications)
+        .into_iter()
+        .filter(|notification| {
+            notification.creation_time.elapsed() <= Duration::from_millis(3000)
+        })
+        .collect::<Vec<_>>();
+    if !notifications.is_empty() {
+        egui::Window::new("Notifications").show(&gui, |ui| {
+            for notification in notifications {
+                egui_rich_text(ui, &notification.message);
+            }
+        });
+    }
 }
 
 fn view(
@@ -276,6 +332,7 @@ fn view(
         partners: _,
         colors: _,
         image,
+        notifications: _,
     }: &Model,
     frame: Frame<'_>,
 ) {
@@ -286,6 +343,25 @@ fn view(
 
     draw.to_frame(app, &frame).unwrap();
     egui.draw_to_frame(&frame).unwrap();
+}
+
+fn egui_rich_text(ui: &mut egui::Ui, text: &str) {
+    for line in text.trim().lines() {
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing.x = 0.0;
+            let mut code = false;
+            for part in line.split('$') {
+                if !part.is_empty() {
+                    if code {
+                        ui.code(part);
+                    } else {
+                        ui.label(part);
+                    }
+                }
+                code = !code;
+            }
+        });
+    }
 }
 
 fn hsva_to_image_rgba(hsva: Hsva) -> nannou::image::Rgba<u8> {
