@@ -29,7 +29,7 @@ struct Model {
     positions: Vec<Vec2>,
     velocities: Vec<Vec2>,
     partners: Vec<[usize; 2]>,
-    colors: Vec<Hsv>,
+    colors: Vec<Hsva>,
     image: DynamicImage,
     notifications: Vec<Notification>,
 }
@@ -130,10 +130,11 @@ fn model(app: &App) -> Model {
     let colors = with_rng!(|rng| params
         .idxs()
         .map(|_idx| {
-            hsv(
+            hsva(
                 rng.gen_range(0.0 / 360.0..=240.0 / 360.0),
                 rng.gen_range(0.20..=0.40),
                 0.80,
+                0.06,
             )
         })
         .collect::<Vec<_>>());
@@ -289,7 +290,6 @@ fn update(
         let y = y as u32;
 
         let color = colors[idx];
-        let color = Hsva::new(color.hue, color.saturation, color.value, 0.06);
 
         image.blend_pixel(x, y, hsva_to_image_rgba(color));
     }
