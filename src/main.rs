@@ -65,7 +65,7 @@ impl Notification {
 
 fn model(app: &App) -> Model {
     let seed: u64 = thread_rng().gen();
-    let seed: u64 = 0xb0ddde9d83a31516;
+    let seed: u64 = 0x27e3771584a46455;
     eprintln!("SEED: 0x{seed:016x}");
 
     let params = Params {
