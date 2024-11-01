@@ -2,7 +2,7 @@
 #![deny(clippy::correctness)]
 
 use nannou::{
-    image::{DynamicImage, GenericImage, GenericImageView, Pixel},
+    image::{DynamicImage, GenericImage, GenericImageView, RgbaImage},
     prelude::*,
 };
 use nannou_egui::{egui, Egui};
@@ -138,10 +138,12 @@ fn model(app: &App) -> Model {
         })
         .collect::<Vec<_>>());
 
-    let image = DynamicImage::new_rgba8(
+    let image = RgbaImage::from_pixel(
         window.rect().w() as u32,
         window.rect().h() as u32,
+        hsva_to_image_rgba(Hsva::new(0.0 / 360.0, 0.00, 0.00, 1.00)),
     );
+    let image = DynamicImage::ImageRgba8(image);
 
     let notifications = Vec::new();
 
@@ -219,13 +221,6 @@ fn event(
                 })
                 .find(|path| !path.exists())
                 .unwrap();
-            let mut image = image.to_rgba8();
-            let background = Hsva::new(0.0 / 360.0, 0.00, 0.00, 1.00);
-            for px in image.pixels_mut() {
-                let px_ = *px;
-                *px = hsva_to_image_rgba(background);
-                px.blend(&px_);
-            }
             match image.save(&path) {
                 Ok(()) => {
                     eprintln!("saved image to {path:?}");
@@ -338,7 +333,6 @@ fn view(
 ) {
     let draw = app.draw();
 
-    draw.background().hsv(0.0 / 360.0, 0.00, 0.00);
     draw.texture(&wgpu::Texture::from_image(app, image));
 
     draw.to_frame(app, &frame).unwrap();
