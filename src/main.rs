@@ -297,9 +297,40 @@ fn update(
     egui.set_elapsed_time(update.since_start);
     let gui = egui.begin_frame();
 
-    egui::Window::new("Help").show(&gui, |ui| {
-        egui_rich_text(ui, HELP);
-    });
+    egui::Window::new("Help")
+        .anchor(egui::Align2::LEFT_TOP, egui::Vec2::new(0.0, 0.0))
+        .show(&gui, |ui| {
+            egui_rich_text(ui, HELP);
+        });
+
+    egui::Window::new("Params")
+        .anchor(egui::Align2::LEFT_TOP, egui::Vec2::new(0.0, 0.0))
+        .show(&gui, |ui| {
+            let Params {
+                particle_count,
+                seed,
+            } = params;
+            egui::Grid::new("params").show(ui, |ui| {
+                fn egui_param(
+                    ui: &mut egui::Ui,
+                    name: &'static str,
+                    value: String,
+                ) {
+                    ui.with_layout(
+                        egui::Layout::left_to_right(egui::Align::RIGHT),
+                        |ui| {
+                            ui.spacing_mut().item_spacing.x = 0.0;
+                            ui.label(egui::RichText::new(name).strong());
+                            ui.label(":");
+                        },
+                    );
+                    ui.label(value);
+                    ui.end_row();
+                }
+                egui_param(ui, "seed", format!("0x{seed:016x}"));
+                egui_param(ui, "particles", particle_count.to_string());
+            });
+        });
 
     *notifications = mem::take(notifications)
         .into_iter()
@@ -308,11 +339,13 @@ fn update(
         })
         .collect::<Vec<_>>();
     if !notifications.is_empty() {
-        egui::Window::new("Notifications").show(&gui, |ui| {
-            for notification in notifications {
-                egui_rich_text(ui, &notification.message);
-            }
-        });
+        egui::Window::new("Notifications")
+            .anchor(egui::Align2::RIGHT_TOP, egui::Vec2::new(0.0, 0.0))
+            .show(&gui, |ui| {
+                for notification in notifications {
+                    egui_rich_text(ui, &notification.message);
+                }
+            });
     }
 }
 
@@ -340,6 +373,7 @@ fn view(
 }
 
 fn egui_rich_text(ui: &mut egui::Ui, text: &str) {
+    // TODO: try egui::RichText
     for line in text.trim().lines() {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
