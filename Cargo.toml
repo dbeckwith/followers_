@@ -2,6 +2,24 @@
 resolver = "2"
 members = []
 
+[workspace.dependencies]
+anyhow = "1.0.95"
+console_error_panic_hook = "0.1.7"
+dioxus = { version = "=0.6.0", default-features = false }
+getrandom = "*" # dependency of rand
+log = "0.4.22"
+rand = "0.8"
+rand_chacha = "0.3"
+serde = "1.0.217"
+wasm-logger = "0.2.0"
+
+# all dependencies from the wasm-bindgen repo need to be pinned to releases from the same commit
+# https://github.com/rustwasm/wasm-bindgen/tree/0.2.95
+js-sys = "=0.3.72"
+wasm-bindgen = "=0.2.95"
+wasm-bindgen-futures = "=0.4.45"
+web-sys = "=0.3.72"
+
 [package]
 name = "followers"
 version = "0.1.0"
@@ -9,9 +27,45 @@ authors = ["Daniel Beckwith <djbsnx@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.91"
-nannou = "0.19.0"
-nannou_egui = "0.19.0"
-rand = "0.8.5"
-rand_chacha = "0.3.1"
-serde = { version = "1.0.214", features = ["derive"] }
+anyhow = { workspace = true }
+console_error_panic_hook = { workspace = true }
+getrandom = { workspace = true, features = ["js"] }
+js-sys = { workspace = true }
+log = { workspace = true }
+rand = { workspace = true }
+rand_chacha = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+wasm-logger = { workspace = true }
+
+[dependencies.dioxus]
+workspace = true
+features = [
+    "asset",
+    "document",
+    "file_engine",
+    "hooks",
+    "html",
+    "launch",
+    "logger",
+    "macro",
+    "mounted",
+    "signals",
+    "web",
+]
+
+[dependencies.web-sys]
+workspace = true
+features = [
+    "Document",
+    "HtmlElement",
+    "Location",
+    "Window",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = "s"
