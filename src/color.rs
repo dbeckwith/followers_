@@ -21,6 +21,14 @@ impl Color {
         }
     }
 
+    pub fn hex(rgba: u32) -> Self {
+        let r = ((rgba & 0xff000000) >> 24) as u8;
+        let g = ((rgba & 0x00ff0000) >> 16) as u8;
+        let b = ((rgba & 0x0000ff00) >> 8) as u8;
+        let a = (rgba & 0x000000ff) as u8;
+        Self { r, g, b, a }
+    }
+
     pub fn hsva(mut h: f32, mut s: f32, mut v: f32, mut a: f32) -> Self {
         h /= 60.0;
         s /= 100.0;

@@ -25,7 +25,7 @@ impl WorldRenderer {
 
         let width = canvas.width() as usize;
         let height = canvas.height() as usize;
-        let image = Image::new(width, height, Color::transparent());
+        let image = Image::new(width, height, Color::hex(0x242424ff));
 
         let image = Rc::new(RefCell::new(image));
         let context = Rc::new(RefCell::new(context));
