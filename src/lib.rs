@@ -205,13 +205,13 @@ impl World {
             positions[idx] += velocities[idx];
         }
 
-        let w = image.width();
-        let h = image.height();
+        let w = image.width() as f32;
+        let h = image.height() as f32;
         for idx in params.idxs() {
             let pos = positions[idx];
-            let x = pos.x + w as f32 / 2.0;
-            let y = pos.y + h as f32 / 2.0;
-            if x < 0.0 || x >= w as f32 || y < 0.0 || y >= h as f32 {
+            let x = pos.x + w / 2.0;
+            let y = pos.y + h / 2.0;
+            if x < 0.0 || x >= w || y < 0.0 || y >= h {
                 return;
             }
             let x = x as usize;
@@ -470,16 +470,19 @@ impl Vec2 {
         self.x * other.x + self.y * other.y
     }
 
+    fn length_squared(self) -> f32 {
+        self.dot(self)
+    }
+
     fn distance_squared(self, other: Self) -> f32 {
-        (self.x - other.x) * (self.x - other.x)
-            + (self.y - other.y) * (self.y - other.y)
+        (self - other).length_squared()
     }
 
     fn clamp_length_max(self, max_length: f32) -> Self {
         let max_length_sq = max_length * max_length;
         let length_sq = self.x * self.x + self.y * self.y;
         if length_sq > max_length_sq {
-            self * (max_length_sq.sqrt() / length_sq.sqrt())
+            self * (max_length / length_sq.sqrt())
         } else {
             self
         }
