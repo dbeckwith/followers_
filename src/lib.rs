@@ -40,13 +40,19 @@ fn start() -> Result<(), JsValue> {
 
 #[component]
 fn App() -> Element {
-    let world = use_signal(World::new);
+    let mut world = use_signal(World::new);
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
 
     let (canvas_element, on_canvas_mounted) =
         use_element::<web_sys::HtmlCanvasElement>();
-
     let canvas_size = use_element_size(canvas_element.read().clone());
+
+    let on_click_reset = use_callback(move |_: Event<MouseData>| {
+        world.set(World::new());
+        if let Some(world_renderer) = &mut *world_renderer.write() {
+            world_renderer.clear();
+        }
+    });
 
     use_effect(move || {
         let canvas_element = canvas_element.read();
@@ -93,6 +99,13 @@ fn App() -> Element {
                 span {
                     class: "param-value",
                     "{particle_count}"
+                }
+            }
+            div {
+                class: "control",
+                button {
+                    onclick: on_click_reset,
+                    "reset"
                 }
             }
         }

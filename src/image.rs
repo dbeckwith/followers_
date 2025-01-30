@@ -133,4 +133,8 @@ impl Image {
             },
         }
     }
+
+    pub fn clear(&mut self) {
+        self.pixels.fill(self.background);
+    }
 }

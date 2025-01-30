@@ -86,4 +86,8 @@ impl WorldRenderer {
         self.image.borrow_mut().resize(width, height);
         *self.context.borrow_mut() = context;
     }
+
+    pub fn clear(&mut self) {
+        self.image.borrow_mut().clear();
+    }
 }
