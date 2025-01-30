@@ -42,7 +42,93 @@ impl Image {
     }
 
     pub fn resize(&mut self, width: usize, height: usize) {
-        // TODO: preserve image content on resize
-        *self = Self::new(width, height);
+        // resize the image
+        // preserve its contents in the center of the new image
+        use std::cmp::Ordering::*;
+        let bg = Color::hsva(0.0, 0.0, 0.0, 100.0);
+        let w1 = self.width;
+        let h1 = self.height;
+        let w2 = width;
+        let h2 = height;
+        match (w2.cmp(&w1), h2.cmp(&h1)) {
+            (Less, Less | Equal) => {
+                let mx = (w1 - w2) / 2;
+                let my = (h1 - h2) / 2;
+                let p1 = &self.pixels;
+                let mut p2 = vec![bg; w2 * h2];
+                for y2 in 0..h2 {
+                    let y1 = y2 - my;
+                    let i1 = mx + w1 * y1;
+                    let i2 = w2 * y2;
+                    p2[i2..i2 + w2].copy_from_slice(&p1[i1..i1 + w2]);
+                }
+                self.pixels = p2;
+                self.width = width;
+                self.height = height;
+            },
+            (Less, Greater) => {
+                let mx = (w1 - w2) / 2;
+                let my = (h2 - h1) / 2;
+                let p1 = &self.pixels;
+                let mut p2 = vec![bg; w2 * h2];
+                for y1 in 0..h1 {
+                    let y2 = y1 + my;
+                    let i1 = mx + w1 * y1;
+                    let i2 = w2 * y2;
+                    p2[i2..i2 + w2].copy_from_slice(&p1[i1..i1 + w2]);
+                }
+                self.pixels = p2;
+                self.width = width;
+                self.height = height;
+            },
+            (Equal, Less) => {
+                let my = (h1 - h2) / 2;
+                let p1 = &self.pixels;
+                let p2 = p1[w1 * my..w1 * (my + h2)].to_vec();
+                self.pixels = p2;
+                self.width = width;
+                self.height = height;
+            },
+            (Equal, Equal) => {},
+            (Equal, Greater) => {
+                let my = (h2 - h1) / 2;
+                let p1 = &self.pixels;
+                let mut p2 = vec![bg; w2 * h2];
+                p2[w2 * my..w2 * (my + h1)].copy_from_slice(p1);
+                self.pixels = p2;
+                self.width = width;
+                self.height = height;
+            },
+            (Greater, Less | Equal) => {
+                let mx = (w2 - w1) / 2;
+                let my = (h1 - h2) / 2;
+                let p1 = &self.pixels;
+                let mut p2 = vec![bg; w2 * h2];
+                for y2 in 0..h2 {
+                    let y1 = y2 + my;
+                    let i1 = w1 * y1;
+                    let i2 = mx + w2 * y2;
+                    p2[i2..i2 + w1].copy_from_slice(&p1[i1..i1 + w1]);
+                }
+                self.pixels = p2;
+                self.width = width;
+                self.height = height;
+            },
+            (Greater, Greater) => {
+                let mx = (w2 - w1) / 2;
+                let my = (h2 - h1) / 2;
+                let p1 = &self.pixels;
+                let mut p2 = vec![bg; w2 * h2];
+                for y1 in 0..h1 {
+                    let y2 = y1 + my;
+                    let i1 = w1 * y1;
+                    let i2 = mx + w2 * y2;
+                    p2[i2..i2 + w1].copy_from_slice(&p1[i1..i1 + w1]);
+                }
+                self.pixels = p2;
+                self.width = width;
+                self.height = height;
+            },
+        }
     }
 }

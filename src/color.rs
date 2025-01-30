@@ -12,6 +12,15 @@ pub struct Color {
 const BYTE_MAX_FLOAT: f32 = 0xff as f32;
 
 impl Color {
+    pub const fn transparent() -> Self {
+        Self {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 0,
+        }
+    }
+
     pub fn hsva(mut h: f32, mut s: f32, mut v: f32, mut a: f32) -> Self {
         h /= 60.0;
         s /= 100.0;
