@@ -1,6 +1,6 @@
 mod hooks;
 
-use crate::hooks::use_element;
+use crate::hooks::{use_element, use_element_size};
 use anyhow::{ensure, Result};
 use dioxus::prelude::*;
 use log::{debug, info};
@@ -46,26 +46,32 @@ fn App() -> Element {
     let (canvas_element, on_canvas_mounted) =
         use_element::<web_sys::HtmlCanvasElement>();
 
+    let canvas_size = use_element_size(canvas_element.read().clone());
+
     use_effect(move || {
         let canvas_element = canvas_element.read();
         let canvas_element = &*canvas_element;
+        let canvas_size = canvas_size.read();
+        let canvas_size = *canvas_size;
         if let Some(canvas_element) = canvas_element {
-            let renderer = WorldRenderer::new(canvas_element, world);
-            world_renderer.set(Some(renderer));
+            if let Some(canvas_size) = canvas_size {
+                canvas_element.set_width(canvas_size.width as u32);
+                canvas_element.set_height(canvas_size.height as u32);
+            }
+            world_renderer.with_mut(|renderer| {
+                if let Some(renderer) = renderer {
+                    renderer.update(canvas_element);
+                } else {
+                    *renderer = Some(WorldRenderer::new(canvas_element, world));
+                }
+            });
         }
     });
-
-    // TODO: size canvas to window
-
-    // TODO: update world renderer on canvas resize
-    // don't just create a brand new renderer; preserve image data from old one
 
     // TODO: display params
 
     rsx! {
         canvas {
-            width: 1920,
-            height: 1080,
             onmounted: on_canvas_mounted,
         }
     }
@@ -225,6 +231,8 @@ impl World {
 }
 
 struct WorldRenderer {
+    image: Rc<RefCell<Image>>,
+    context: Rc<RefCell<web_sys::CanvasRenderingContext2d>>,
     #[allow(clippy::type_complexity)]
     _closure_handle: Rc<RefCell<Option<Closure<dyn FnMut()>>>>,
 }
@@ -243,19 +251,25 @@ impl WorldRenderer {
 
         let width = canvas.width() as usize;
         let height = canvas.height() as usize;
-        let mut image = Image::new(width, height);
-        debug!("start render {}x{}", width, height);
+        let image = Image::new(width, height);
+
+        let image = Rc::new(RefCell::new(image));
+        let context = Rc::new(RefCell::new(context));
 
         let window = canvas.owner_document().unwrap().default_view().unwrap();
 
         let closure_handle =
             Rc::new(RefCell::new(None::<Closure<dyn FnMut()>>));
         let closure = Closure::new({
+            let image = Rc::clone(&image);
+            let context = Rc::clone(&context);
             let window = window.clone();
             let closure_handle = Rc::clone(&closure_handle);
             move || {
                 debug!("update");
-                world.write().update(&mut image);
+                let image = &mut *image.borrow_mut();
+                let context = &mut *context.borrow_mut();
+                world.write().update(image);
                 let image_data = image.to_image_data();
                 context.put_image_data(&image_data, 0.0, 0.0).unwrap();
                 window
@@ -270,14 +284,33 @@ impl WorldRenderer {
                     .unwrap();
             }
         });
+        debug!("start render {}x{}", width, height);
         window
             .request_animation_frame(closure.as_ref().unchecked_ref())
             .unwrap();
         *closure_handle.borrow_mut() = Some(closure);
 
         WorldRenderer {
+            image,
+            context,
             _closure_handle: closure_handle,
         }
+    }
+
+    fn update(&mut self, canvas: &web_sys::HtmlCanvasElement) {
+        let context = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+            .unwrap();
+
+        let width = canvas.width() as usize;
+        let height = canvas.height() as usize;
+        debug!("update render {}x{}", width, height);
+
+        self.image.borrow_mut().resize(width, height);
+        *self.context.borrow_mut() = context;
     }
 }
 
@@ -319,6 +352,11 @@ impl Image {
             sh,
         )
         .unwrap()
+    }
+
+    fn resize(&mut self, width: usize, height: usize) {
+        // TODO: preserve image content on resize
+        *self = Self::new(width, height);
     }
 }
 

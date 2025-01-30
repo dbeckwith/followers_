@@ -66,6 +66,7 @@ features = [
     "HtmlElement",
     "ImageData",
     "Location",
+    "ResizeObserver",
     "Window",
 ]
 
