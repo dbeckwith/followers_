@@ -332,6 +332,8 @@ struct Color {
     a: u8,
 }
 
+const BYTE_MAX_FLOAT: f32 = 0xff as f32;
+
 impl Color {
     fn hsva(mut h: f32, mut s: f32, mut v: f32, mut a: f32) -> Self {
         h /= 60.0;
@@ -357,40 +359,48 @@ impl Color {
         let r = r + m;
         let g = g + m;
         let b = b + m;
-        let r = (r * 0xff as f32) as u8;
-        let g = (g * 0xff as f32) as u8;
-        let b = (b * 0xff as f32) as u8;
-        let a = (a * 0xff as f32) as u8;
+        let r = (r * BYTE_MAX_FLOAT) as u8;
+        let g = (g * BYTE_MAX_FLOAT) as u8;
+        let b = (b * BYTE_MAX_FLOAT) as u8;
+        let a = (a * BYTE_MAX_FLOAT) as u8;
         Self { r, g, b, a }
     }
 
     fn blend(self, other: Color) -> Self {
         let Self {
-            r: src_r,
-            g: src_g,
-            b: src_b,
-            a: src_a,
+            r: top_r,
+            g: top_g,
+            b: top_b,
+            a: top_a,
         } = other;
         let Self {
-            r: dest_r,
-            g: dest_g,
-            b: dest_b,
-            a: dest_a,
+            r: bot_r,
+            g: bot_g,
+            b: bot_b,
+            a: bot_a,
         } = self;
 
-        fn inv(c: u8) -> u8 {
-            0xff - c
-        }
-        fn mul(c1: u8, c2: u8) -> u8 {
-            (u16::from(c1) * u16::from(c2) / 0xff) as u8
-        }
+        let top_r = top_r as f32 / BYTE_MAX_FLOAT;
+        let top_g = top_g as f32 / BYTE_MAX_FLOAT;
+        let top_b = top_b as f32 / BYTE_MAX_FLOAT;
+        let top_a = top_a as f32 / BYTE_MAX_FLOAT;
+        let bot_r = bot_r as f32 / BYTE_MAX_FLOAT;
+        let bot_g = bot_g as f32 / BYTE_MAX_FLOAT;
+        let bot_b = bot_b as f32 / BYTE_MAX_FLOAT;
+        let bot_a = bot_a as f32 / BYTE_MAX_FLOAT;
 
-        Self {
-            r: mul(src_r, src_a) + mul(dest_r, inv(src_a)),
-            g: mul(src_g, src_a) + mul(dest_g, inv(src_a)),
-            b: mul(src_b, src_a) + mul(dest_b, inv(src_a)),
-            a: src_a + mul(dest_a, inv(src_a)),
-        }
+        let top_a_inv = 1.0 - top_a;
+        let a = top_a + bot_a * top_a_inv;
+        let r = (top_r * top_a + bot_r * bot_a * top_a_inv) / a;
+        let g = (top_g * top_a + bot_g * bot_a * top_a_inv) / a;
+        let b = (top_b * top_a + bot_b * bot_a * top_a_inv) / a;
+
+        let r = (r * BYTE_MAX_FLOAT) as u8;
+        let g = (g * BYTE_MAX_FLOAT) as u8;
+        let b = (b * BYTE_MAX_FLOAT) as u8;
+        let a = (a * BYTE_MAX_FLOAT) as u8;
+
+        Self { r, g, b, a }
     }
 }
 
