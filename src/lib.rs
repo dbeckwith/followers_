@@ -157,7 +157,6 @@ impl World {
         let colors = with_rng!(|rng| params
             .idxs()
             .map(|_idx| {
-                // FIXME: colors seem darker than the nannou version
                 Color::hsva(
                     rng.gen_range(0.0..=240.0),
                     rng.gen_range(20.0..=40.0),
@@ -359,6 +358,16 @@ impl Color {
         let r = r + m;
         let g = g + m;
         let b = b + m;
+        fn srgb_from_linear(x: f32) -> f32 {
+            if x <= 0.0031308 {
+                x * 12.92
+            } else {
+                x.powf(1.0 / 2.4) * 1.055 - 0.055
+            }
+        }
+        let r = srgb_from_linear(r);
+        let g = srgb_from_linear(g);
+        let b = srgb_from_linear(b);
         let r = (r * BYTE_MAX_FLOAT) as u8;
         let g = (g * BYTE_MAX_FLOAT) as u8;
         let b = (b * BYTE_MAX_FLOAT) as u8;
