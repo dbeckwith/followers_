@@ -4,7 +4,6 @@ use crate::{
     math::{lerp, Vec2},
 };
 use anyhow::{ensure, Result};
-use log::info;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use std::f32::consts::PI;
@@ -38,13 +37,7 @@ impl Params {
 }
 
 impl World {
-    pub fn new() -> Self {
-        let seed: u64 = thread_rng().gen();
-        let seed: u64 = 0x27e3771584a46455;
-        info!("SEED: 0x{seed:016x}");
-
-        let params = Params::new(1000, seed).unwrap();
-
+    pub fn new(params: Params) -> Self {
         let mut seeds = ChaCha20Rng::seed_from_u64(params.seed)
             .sample_iter(rand::distributions::Standard);
 

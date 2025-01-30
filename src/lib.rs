@@ -13,6 +13,7 @@ use crate::{
 use anyhow::Result;
 use dioxus::prelude::*;
 use log::info;
+use rand::prelude::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
@@ -40,15 +41,27 @@ fn start() -> Result<(), JsValue> {
 
 #[component]
 fn App() -> Element {
-    let mut world = use_signal(World::new);
+    let mut seed_rng = use_signal(thread_rng);
+    let mut params =
+        use_signal(|| Params::new(1000, 0x27e3771584a46455).unwrap());
+    let mut world = use_signal(|| World::new(*params.peek()));
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
 
     let (canvas_element, on_canvas_mounted) =
         use_element::<web_sys::HtmlCanvasElement>();
     let canvas_size = use_element_size(canvas_element.read().clone());
 
+    let on_click_new_seed = use_callback(move |_: Event<MouseData>| {
+        let seed = seed_rng.write().gen();
+        params.write().seed = seed;
+    });
+
     let on_click_reset = use_callback(move |_: Event<MouseData>| {
-        world.set(World::new());
+        params.write();
+    });
+
+    use_effect(move || {
+        world.set(World::new(*params.read()));
         if let Some(world_renderer) = &mut *world_renderer.write() {
             world_renderer.clear();
         }
@@ -99,6 +112,13 @@ fn App() -> Element {
                 span {
                     class: "param-value",
                     "{particle_count}"
+                }
+            }
+            div {
+                class: "control",
+                button {
+                    onclick: on_click_new_seed,
+                    "new seed"
                 }
             }
             div {
