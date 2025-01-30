@@ -12,6 +12,7 @@ rand = "0.8"
 rand_chacha = "0.3"
 serde = "1.0.217"
 wasm-logger = "0.2.0"
+zerocopy = "0.8.14"
 
 # all dependencies from the wasm-bindgen repo need to be pinned to releases from the same commit
 # https://github.com/rustwasm/wasm-bindgen/tree/0.2.95
@@ -38,6 +39,7 @@ serde = { workspace = true, features = ["derive"] }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 wasm-logger = { workspace = true }
+zerocopy = { workspace = true, features = ["derive"] }
 
 [dependencies.dioxus]
 workspace = true
@@ -58,8 +60,11 @@ features = [
 [dependencies.web-sys]
 workspace = true
 features = [
+    "CanvasRenderingContext2d",
     "Document",
+    "HtmlCanvasElement",
     "HtmlElement",
+    "ImageData",
     "Location",
     "Window",
 ]
