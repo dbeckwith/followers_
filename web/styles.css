@@ -24,6 +24,16 @@ body {
   background-color: #242424;
 }
 
+button {
+  font-family: inherit;
+  font-optical-sizing: inherit;
+  font-weight: inherit;
+  font-style: inherit;
+  font-variation-settings: inherit;
+  text-rendering: inherit;
+  font-size: inherit;
+}
+
 canvas {
   position: absolute;
   left: 0;
@@ -47,11 +57,12 @@ canvas {
   padding: 8px;
   gap: 4px;
 
+  font-size: 12px;
+
   background-color: #0004;
 }
 
 .param {
-  font-size: 12px;
 }
 
 .param-value {
