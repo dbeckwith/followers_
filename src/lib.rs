@@ -8,7 +8,7 @@ mod world;
 use crate::{
     hooks::{use_element, use_element_size},
     renderer::WorldRenderer,
-    world::World,
+    world::{Params, World},
 };
 use anyhow::Result;
 use dioxus::prelude::*;
@@ -68,11 +68,33 @@ fn App() -> Element {
         }
     });
 
-    // TODO: display params
+    let Params {
+        particle_count,
+        seed,
+    } = *world.read().params();
 
     rsx! {
         canvas {
             onmounted: on_canvas_mounted,
+        }
+        div {
+            class: "ui",
+            div {
+                class: "param",
+                "seed: "
+                span {
+                    class: "param-value seed",
+                    "0x{seed:016x}"
+                }
+            }
+            div {
+                class: "param",
+                "particles: "
+                span {
+                    class: "param-value",
+                    "{particle_count}"
+                }
+            }
         }
     }
 }

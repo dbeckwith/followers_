@@ -17,6 +17,7 @@ pub struct World {
     colors: Vec<Color>,
 }
 
+#[derive(Clone, Copy)]
 pub struct Params {
     pub particle_count: usize,
     pub seed: u64,
@@ -111,6 +112,10 @@ impl World {
             partners,
             colors,
         }
+    }
+
+    pub fn params(&self) -> &Params {
+        &self.params
     }
 
     pub fn update(&mut self, image: &mut Image) {
