@@ -4,15 +4,17 @@ use zerocopy::IntoBytes;
 pub struct Image {
     width: usize,
     height: usize,
+    background: Color,
     pixels: Vec<Color>,
 }
 
 impl Image {
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: usize, height: usize, background: Color) -> Self {
         Self {
             width,
             height,
-            pixels: vec![Color::hsva(0.0, 0.0, 0.0, 100.0); width * height],
+            background,
+            pixels: vec![background; width * height],
         }
     }
 
@@ -45,7 +47,7 @@ impl Image {
         // resize the image
         // preserve its contents in the center of the new image
         use std::cmp::Ordering::*;
-        let bg = Color::hsva(0.0, 0.0, 0.0, 100.0);
+        let bg = self.background;
         let w1 = self.width;
         let h1 = self.height;
         let w2 = width;

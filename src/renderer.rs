@@ -1,4 +1,4 @@
-use crate::{image::Image, world::World};
+use crate::{color::Color, image::Image, world::World};
 use dioxus::prelude::*;
 use log::debug;
 use std::{cell::RefCell, rc::Rc};
@@ -25,7 +25,7 @@ impl WorldRenderer {
 
         let width = canvas.width() as usize;
         let height = canvas.height() as usize;
-        let image = Image::new(width, height);
+        let image = Image::new(width, height, Color::transparent());
 
         let image = Rc::new(RefCell::new(image));
         let context = Rc::new(RefCell::new(context));
