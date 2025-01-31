@@ -60,13 +60,16 @@ features = [
 [dependencies.web-sys]
 workspace = true
 features = [
+    "Blob",
     "CanvasRenderingContext2d",
     "Document",
+    "HtmlAnchorElement",
     "HtmlCanvasElement",
     "HtmlElement",
     "ImageData",
     "Location",
     "ResizeObserver",
+    "Url",
     "Window",
 ]
 

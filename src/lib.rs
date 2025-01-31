@@ -60,6 +60,48 @@ fn App() -> Element {
         params.write();
     });
 
+    let on_click_save = use_callback(move |_: Event<MouseData>| {
+        let canvas_element = &*canvas_element.read();
+        let canvas_element = if let Some(canvas_element) = canvas_element {
+            canvas_element
+        } else {
+            return;
+        };
+        let params = *params.read();
+        let document = canvas_element.owner_document().unwrap();
+        let closure = Closure::<dyn FnMut(Option<web_sys::Blob>)>::new(
+            move |blob: Option<web_sys::Blob>| {
+                let blob = if let Some(blob) = blob {
+                    blob
+                } else {
+                    return;
+                };
+                let anchor = document.create_element("a").unwrap();
+                let anchor =
+                    anchor.dyn_into::<web_sys::HtmlAnchorElement>().unwrap();
+                let Params {
+                    particle_count,
+                    seed,
+                } = params;
+                anchor.set_download(&format!(
+                    "{particle_count}-0x{seed:016x}.png"
+                ));
+                let url =
+                    web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+                anchor.set_href(&url);
+                let body = document.body().unwrap();
+                body.append_child(&anchor).unwrap();
+                anchor.click();
+                body.remove_child(&anchor).unwrap();
+                web_sys::Url::revoke_object_url(&url).unwrap();
+            },
+        );
+        canvas_element
+            .to_blob(closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget(); // FIXME: don't leak
+    });
+
     use_effect(move || {
         world.set(World::new(*params.read()));
         if let Some(world_renderer) = &mut *world_renderer.write() {
@@ -68,10 +110,8 @@ fn App() -> Element {
     });
 
     use_effect(move || {
-        let canvas_element = canvas_element.read();
-        let canvas_element = &*canvas_element;
-        let canvas_size = canvas_size.read();
-        let canvas_size = *canvas_size;
+        let canvas_element = &*canvas_element.read();
+        let canvas_size = *canvas_size.read();
         if let Some(canvas_element) = canvas_element {
             if let Some(canvas_size) = canvas_size {
                 canvas_element.set_width(canvas_size.width as u32);
@@ -126,6 +166,13 @@ fn App() -> Element {
                 button {
                     onclick: on_click_reset,
                     "reset"
+                }
+            }
+            div {
+                class: "control",
+                button {
+                    onclick: on_click_save,
+                    "save"
                 }
             }
         }
