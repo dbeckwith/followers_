@@ -103,7 +103,7 @@ impl World {
             .map(|_idx| {
                 Color::hsva(
                     rng.gen_range(0.0..=240.0),
-                    rng.gen_range(20.0..=40.0),
+                    rng.gen_range(60.0..=80.0),
                     100.0,
                     particle_alpha,
                 )
