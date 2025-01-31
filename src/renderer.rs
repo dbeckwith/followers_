@@ -22,7 +22,8 @@ impl WorldRenderer {
     pub fn new(
         canvas: &web_sys::HtmlCanvasElement,
         mut world: Signal<World>,
-        background: Color,
+        background: Signal<Color>,
+        frame_limit: Signal<usize>,
     ) -> WorldRenderer {
         let context = canvas
             .get_context("2d")
@@ -33,7 +34,7 @@ impl WorldRenderer {
 
         let width = canvas.width() as usize;
         let height = canvas.height() as usize;
-        let image = Image::new(width, height, background);
+        let image = Image::new(width, height, *background.peek());
 
         let image_data = image.to_image_data();
         context.put_image_data(&image_data, 0.0, 0.0).unwrap();
@@ -57,6 +58,16 @@ impl WorldRenderer {
             move || {
                 if paused.load(atomic::Ordering::SeqCst) {
                     return;
+                }
+                {
+                    let frame_idx_ = frame_idx.load(atomic::Ordering::SeqCst);
+                    let frame_limit_ = *frame_limit.peek();
+                    if frame_limit_ > 0 && frame_idx_ >= frame_limit_ {
+                        paused.store(true, atomic::Ordering::SeqCst);
+                        // force a dioxus re-render so paused state is observed
+                        world.write();
+                        return;
+                    }
                 }
                 debug!("update");
                 let image = &mut *image.borrow_mut();

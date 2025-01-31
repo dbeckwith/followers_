@@ -50,6 +50,7 @@ fn App() -> Element {
         acc_limit: -1.0,
     });
     let background_color = use_signal(|| Color::hex(0x000000ff));
+    let mut frame_limit = use_signal(|| 60 * 60);
     let mut world = use_signal(|| World::new(*params.peek()).unwrap());
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
 
@@ -89,6 +90,15 @@ fn App() -> Element {
             return;
         };
         params.write().acc_limit = acc_limit;
+    });
+
+    let on_input_frame_limit = use_callback(move |event: Event<FormData>| {
+        let frame_limit_ = if let Ok(frame_limit) = event.parsed() {
+            frame_limit
+        } else {
+            return;
+        };
+        frame_limit.set(frame_limit_);
     });
 
     let on_click_pause_resume = use_callback(move |_: Event<MouseData>| {
@@ -174,7 +184,6 @@ fn App() -> Element {
         };
         canvas_element.set_width(canvas_size.width as u32);
         canvas_element.set_height(canvas_size.height as u32);
-        let background_color = *background_color.read();
         world_renderer.with_mut(|renderer| {
             if let Some(renderer) = renderer {
                 renderer.update(canvas_element);
@@ -183,6 +192,7 @@ fn App() -> Element {
                     canvas_element,
                     world,
                     background_color,
+                    frame_limit,
                 ));
             }
         });
@@ -281,6 +291,22 @@ fn App() -> Element {
                         max: 10,
                         value: acc_limit,
                         oninput: on_input_acc_limit,
+                    }
+                }
+            }
+            div {
+                class: "param frame-limit",
+                div {
+                    class: "param-label",
+                    "frame limit: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 1,
+                        value: frame_limit,
+                        oninput: on_input_frame_limit,
                     }
                 }
             }

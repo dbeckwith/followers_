@@ -76,12 +76,12 @@ canvas {
   font-size: 12px;
 }
 
-.param.count .param-control {
-  width: 10em;
+.param.count .param-control input {
+  width: 6em;
 }
 
-.param.alpha .param-control {
-  width: 5em;
+.param.alpha .param-control input {
+  width: 3em;
 }
 
 .param.acc-limit .param-value {
@@ -89,7 +89,11 @@ canvas {
 }
 
 .param.acc-limit .param-control input {
-  width: 10em;
+  width: 6em;
+}
+
+.param.frame-limit .param-control input {
+  width: 6em;
 }
 
 .control {
