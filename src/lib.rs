@@ -166,6 +166,7 @@ fn App() -> Element {
         world.set(new_world);
         if let Some(world_renderer) = &mut *world_renderer.write() {
             world_renderer.clear();
+            world_renderer.resume();
         }
     });
 

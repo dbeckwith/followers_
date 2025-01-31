@@ -121,6 +121,19 @@ impl WorldRenderer {
         }
     }
 
+    pub fn resume(&mut self) {
+        let was_paused = self.paused.swap(false, atomic::Ordering::SeqCst);
+        let resumed = was_paused;
+        if resumed {
+            // restart the render loop
+            let closure = self.closure_handle.borrow();
+            let closure = closure.as_ref().unwrap();
+            self.window
+                .request_animation_frame(closure.as_ref().unchecked_ref())
+                .unwrap();
+        }
+    }
+
     pub fn frame_idx(&self) -> usize {
         self.frame_idx.load(atomic::Ordering::SeqCst)
     }
