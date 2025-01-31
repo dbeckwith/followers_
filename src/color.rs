@@ -110,4 +110,10 @@ impl Color {
 
         Self { r, g, b, a }
     }
+
+    pub fn fade(mut self, mut alpha: f32) -> Self {
+        alpha = alpha.clamp(0.0, 1.0);
+        self.a = (self.a as f32 * alpha) as u8;
+        self
+    }
 }
