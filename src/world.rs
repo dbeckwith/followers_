@@ -4,6 +4,7 @@ use crate::{
     math::{lerp, Vec2},
 };
 use anyhow::{ensure, Result};
+use log::info;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use std::f32::consts::PI;
@@ -38,7 +39,13 @@ impl Params {
 
 impl World {
     pub fn new(params: Params) -> Self {
-        let mut seeds = ChaCha20Rng::seed_from_u64(params.seed)
+        let Params {
+            particle_count,
+            seed,
+        } = params;
+        info!("world init - 0x{seed:016x}:{particle_count}");
+
+        let mut seeds = ChaCha20Rng::seed_from_u64(seed)
             .sample_iter(rand::distributions::Standard);
 
         macro_rules! with_rng {
@@ -56,7 +63,7 @@ impl World {
                 let t = lerp(
                     idx as f32,
                     0.0,
-                    (params.particle_count - 1) as f32,
+                    (particle_count - 1) as f32,
                     0.0,
                     2.0 * PI,
                 );
