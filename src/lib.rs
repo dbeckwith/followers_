@@ -56,6 +56,12 @@ fn App() -> Element {
         params.write().seed = seed;
     });
 
+    let on_click_pause_resume = use_callback(move |_: Event<MouseData>| {
+        if let Some(world_renderer) = &mut *world_renderer.write() {
+            world_renderer.pause_resume();
+        }
+    });
+
     let on_click_reset = use_callback(move |_: Event<MouseData>| {
         params.write();
     });
@@ -111,26 +117,37 @@ fn App() -> Element {
 
     use_effect(move || {
         let canvas_element = &*canvas_element.read();
+        let canvas_element = if let Some(canvas_element) = canvas_element {
+            canvas_element
+        } else {
+            return;
+        };
         let canvas_size = *canvas_size.read();
-        if let Some(canvas_element) = canvas_element {
-            if let Some(canvas_size) = canvas_size {
-                canvas_element.set_width(canvas_size.width as u32);
-                canvas_element.set_height(canvas_size.height as u32);
+        let canvas_size = if let Some(canvas_size) = canvas_size {
+            canvas_size
+        } else {
+            return;
+        };
+        canvas_element.set_width(canvas_size.width as u32);
+        canvas_element.set_height(canvas_size.height as u32);
+        world_renderer.with_mut(|renderer| {
+            if let Some(renderer) = renderer {
+                renderer.update(canvas_element);
+            } else {
+                *renderer = Some(WorldRenderer::new(canvas_element, world));
             }
-            world_renderer.with_mut(|renderer| {
-                if let Some(renderer) = renderer {
-                    renderer.update(canvas_element);
-                } else {
-                    *renderer = Some(WorldRenderer::new(canvas_element, world));
-                }
-            });
-        }
+        });
     });
 
     let Params {
         particle_count,
         seed,
     } = *world.read().params();
+
+    let paused = world_renderer
+        .read()
+        .as_ref()
+        .is_some_and(|world_renderer| world_renderer.paused());
 
     rsx! {
         canvas {
@@ -159,6 +176,13 @@ fn App() -> Element {
                 button {
                     onclick: on_click_new_seed,
                     "new seed"
+                }
+            }
+            div {
+                class: "control",
+                button {
+                    onclick: on_click_pause_resume,
+                    if paused { "resume" } else { "pause" }
                 }
             }
             div {
