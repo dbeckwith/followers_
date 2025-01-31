@@ -30,6 +30,10 @@ impl Color {
     }
 
     pub fn hsva(mut h: f32, mut s: f32, mut v: f32, mut a: f32) -> Self {
+        h = h.rem_euclid(360.0);
+        s = s.clamp(0.0, 100.0);
+        v = v.clamp(0.0, 100.0);
+        a = a.clamp(0.0, 100.0);
         h /= 60.0;
         s /= 100.0;
         v /= 100.0;
