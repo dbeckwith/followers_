@@ -17,19 +17,23 @@ pub struct World {
     colors: Vec<Color>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Params {
     pub particle_count: usize,
     pub seed: u64,
 }
 
 impl Params {
-    pub fn new(particle_count: usize, seed: u64) -> Result<Self> {
-        ensure!(particle_count > 2);
-        Ok(Self {
+    pub fn new(particle_count: usize, seed: u64) -> Self {
+        Self {
             particle_count,
             seed,
-        })
+        }
+    }
+
+    fn check(&self) -> Result<()> {
+        ensure!(self.particle_count > 2);
+        Ok(())
     }
 
     fn idxs(&self) -> std::ops::Range<usize> {
@@ -38,7 +42,9 @@ impl Params {
 }
 
 impl World {
-    pub fn new(params: Params) -> Self {
+    pub fn new(params: Params) -> Result<Self> {
+        params.check()?;
+
         let Params {
             particle_count,
             seed,
@@ -105,13 +111,13 @@ impl World {
             })
             .collect::<Vec<_>>());
 
-        Self {
+        Ok(Self {
             params,
             positions,
             velocities,
             partners,
             colors,
-        }
+        })
     }
 
     pub fn params(&self) -> &Params {

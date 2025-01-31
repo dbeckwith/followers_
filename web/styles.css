@@ -24,7 +24,8 @@ body {
   background-color: #242424;
 }
 
-button {
+button,
+input {
   font-family: inherit;
   font-optical-sizing: inherit;
   font-weight: inherit;
@@ -52,9 +53,10 @@ canvas {
 
   border-bottom-right-radius: 8px;
 
+  padding: 8px;
+
   display: flex;
   flex-direction: column;
-  padding: 8px;
   gap: 4px;
 
   font-size: 12px;
@@ -63,14 +65,19 @@ canvas {
 }
 
 .param {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
 }
 
-.param-value {
-}
-
-.seed {
+.param.seed .param-value {
   font-family: 'Roboto Mono', monospace;
   font-size: 12px;
+}
+
+.param.count .param-control {
+  width: 10em;
 }
 
 .control {

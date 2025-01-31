@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use dioxus::prelude::*;
-use log::info;
+use log::{info, warn};
 use rand::prelude::*;
 use wasm_bindgen::prelude::*;
 
@@ -42,19 +42,28 @@ fn start() -> Result<(), JsValue> {
 #[component]
 fn App() -> Element {
     let mut seed_rng = use_signal(thread_rng);
-    let mut params =
-        use_signal(|| Params::new(1000, 0x27e3771584a46455).unwrap());
-    let mut world = use_signal(|| World::new(*params.peek()));
+    let mut params = use_signal(|| Params::new(1000, 0x27e3771584a46455));
+    let mut world = use_signal(|| World::new(*params.peek()).unwrap());
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
 
     let (canvas_element, on_canvas_mounted) =
         use_element::<web_sys::HtmlCanvasElement>();
     let canvas_size = use_element_size(canvas_element.read().clone());
 
-    let on_click_new_seed = use_callback(move |_: Event<MouseData>| {
+    let on_click_rand_seed = use_callback(move |_: Event<MouseData>| {
         let seed = seed_rng.write().gen();
         params.write().seed = seed;
     });
+
+    let on_input_particle_count =
+        use_callback(move |event: Event<FormData>| {
+            let particle_count = if let Ok(particle_count) = event.parsed() {
+                particle_count
+            } else {
+                return;
+            };
+            params.write().particle_count = particle_count;
+        });
 
     let on_click_pause_resume = use_callback(move |_: Event<MouseData>| {
         if let Some(world_renderer) = &mut *world_renderer.write() {
@@ -109,7 +118,14 @@ fn App() -> Element {
     });
 
     use_effect(move || {
-        world.set(World::new(*params.read()));
+        let params = *params.read();
+        let new_world = if let Ok(world) = World::new(params) {
+            world
+        } else {
+            warn!("bad params: {:?}", params);
+            return;
+        };
+        world.set(new_world);
         if let Some(world_renderer) = &mut *world_renderer.write() {
             world_renderer.clear();
         }
@@ -156,26 +172,38 @@ fn App() -> Element {
         div {
             class: "ui",
             div {
-                class: "param",
-                "seed: "
-                span {
-                    class: "param-value seed",
+                class: "param seed",
+                div {
+                    class: "param-label",
+                    "seed: "
+                }
+                div {
+                    class: "param-value",
                     "0x{seed:016x}"
                 }
-            }
-            div {
-                class: "param",
-                "particles: "
-                span {
-                    class: "param-value",
-                    "{particle_count}"
+                div {
+                    class: "param-control",
+                    button {
+                        onclick: on_click_rand_seed,
+                        "rand"
+                    }
                 }
             }
             div {
-                class: "control",
-                button {
-                    onclick: on_click_new_seed,
-                    "new seed"
+                class: "param count",
+                div {
+                    class: "param-label",
+                    "particles: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 2,
+                        max: 1000000,
+                        value: particle_count,
+                        oninput: on_input_particle_count,
+                    }
                 }
             }
             div {
