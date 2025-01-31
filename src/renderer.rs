@@ -21,6 +21,7 @@ impl WorldRenderer {
     pub fn new(
         canvas: &web_sys::HtmlCanvasElement,
         mut world: Signal<World>,
+        background: Color,
     ) -> WorldRenderer {
         let context = canvas
             .get_context("2d")
@@ -31,7 +32,7 @@ impl WorldRenderer {
 
         let width = canvas.width() as usize;
         let height = canvas.height() as usize;
-        let image = Image::new(width, height, Color::hex(0x242424ff));
+        let image = Image::new(width, height, background);
 
         let image_data = image.to_image_data();
         context.put_image_data(&image_data, 0.0, 0.0).unwrap();

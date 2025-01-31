@@ -6,6 +6,7 @@ mod renderer;
 mod world;
 
 use crate::{
+    color::Color,
     hooks::{use_element, use_element_size},
     renderer::WorldRenderer,
     world::{Params, World},
@@ -48,6 +49,7 @@ fn App() -> Element {
         particle_alpha: 6.0,
         acc_limit: -1.0,
     });
+    let background_color = use_signal(|| Color::hex(0x000000ff));
     let mut world = use_signal(|| World::new(*params.peek()).unwrap());
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
 
@@ -172,11 +174,16 @@ fn App() -> Element {
         };
         canvas_element.set_width(canvas_size.width as u32);
         canvas_element.set_height(canvas_size.height as u32);
+        let background_color = *background_color.read();
         world_renderer.with_mut(|renderer| {
             if let Some(renderer) = renderer {
                 renderer.update(canvas_element);
             } else {
-                *renderer = Some(WorldRenderer::new(canvas_element, world));
+                *renderer = Some(WorldRenderer::new(
+                    canvas_element,
+                    world,
+                    background_color,
+                ));
             }
         });
     });
