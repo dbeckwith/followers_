@@ -172,7 +172,7 @@ impl World {
             let x = pos.x + w / 2.0;
             let y = pos.y + h / 2.0;
             if x < 0.0 || x >= w || y < 0.0 || y >= h {
-                return;
+                continue;
             }
             let x = x as usize;
             let y = y as usize;
