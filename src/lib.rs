@@ -197,10 +197,14 @@ fn App() -> Element {
 
     let acc_limit_display = (2.0f32.powf(acc_limit) * 1000.0).round() / 1000.0;
 
-    let paused = world_renderer
-        .read()
-        .as_ref()
-        .is_some_and(|world_renderer| world_renderer.paused());
+    let world_renderer = world_renderer.read();
+    let world_renderer = world_renderer.as_ref();
+    let paused =
+        world_renderer.is_some_and(|world_renderer| world_renderer.paused());
+    let frame_idx = world_renderer
+        .map(|world_renderer| world_renderer.frame_idx())
+        .unwrap_or(0);
+    let frame_no = frame_idx + 1;
 
     rsx! {
         canvas {
@@ -279,6 +283,17 @@ fn App() -> Element {
                         value: acc_limit,
                         oninput: on_input_acc_limit,
                     }
+                }
+            }
+            div {
+                class: "param frame",
+                div {
+                    class: "param-label",
+                    "frame: "
+                }
+                div {
+                    class: "param-value",
+                    "{frame_no}"
                 }
             }
             div {

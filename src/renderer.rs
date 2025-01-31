@@ -4,7 +4,7 @@ use log::debug;
 use std::{
     cell::RefCell,
     rc::Rc,
-    sync::atomic::{self, AtomicBool},
+    sync::atomic::{self, AtomicBool, AtomicUsize},
 };
 use wasm_bindgen::prelude::*;
 
@@ -12,6 +12,7 @@ pub struct WorldRenderer {
     image: Rc<RefCell<Image>>,
     context: Rc<RefCell<web_sys::CanvasRenderingContext2d>>,
     paused: Rc<AtomicBool>,
+    frame_idx: Rc<AtomicUsize>,
     window: web_sys::Window,
     #[allow(clippy::type_complexity)]
     closure_handle: Rc<RefCell<Option<Closure<dyn FnMut()>>>>,
@@ -40,6 +41,7 @@ impl WorldRenderer {
         let image = Rc::new(RefCell::new(image));
         let context = Rc::new(RefCell::new(context));
         let paused = Rc::new(AtomicBool::new(false));
+        let frame_idx = Rc::new(AtomicUsize::new(0));
 
         let window = canvas.owner_document().unwrap().default_view().unwrap();
 
@@ -49,6 +51,7 @@ impl WorldRenderer {
             let image = Rc::clone(&image);
             let context = Rc::clone(&context);
             let paused = Rc::clone(&paused);
+            let frame_idx = Rc::clone(&frame_idx);
             let window = window.clone();
             let closure_handle = Rc::clone(&closure_handle);
             move || {
@@ -61,6 +64,7 @@ impl WorldRenderer {
                 world.write().update(image);
                 let image_data = image.to_image_data();
                 context.put_image_data(&image_data, 0.0, 0.0).unwrap();
+                frame_idx.fetch_add(1, atomic::Ordering::SeqCst);
                 window
                     .request_animation_frame(
                         closure_handle
@@ -83,6 +87,7 @@ impl WorldRenderer {
             image,
             context,
             paused,
+            frame_idx,
             window,
             closure_handle,
         }
@@ -103,6 +108,10 @@ impl WorldRenderer {
                 .request_animation_frame(closure.as_ref().unchecked_ref())
                 .unwrap();
         }
+    }
+
+    pub fn frame_idx(&self) -> usize {
+        self.frame_idx.load(atomic::Ordering::SeqCst)
     }
 
     pub fn update(&mut self, canvas: &web_sys::HtmlCanvasElement) {
