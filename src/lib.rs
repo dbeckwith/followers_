@@ -195,7 +195,7 @@ fn App() -> Element {
         acc_limit,
     } = *world.read().params();
 
-    let acc_limit_display = (2.0f32.powf(acc_limit) * 1000.0).round() / 1000.0;
+    let acc_limit_display = (acc_limit.exp2() * 1000.0).round() / 1000.0;
 
     let world_renderer = world_renderer.read();
     let world_renderer = world_renderer.as_ref();

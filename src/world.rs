@@ -138,7 +138,7 @@ impl World {
             acc_limit,
         } = *params;
 
-        let acc_limit = 2.0f32.powf(acc_limit);
+        let acc_limit = acc_limit.exp2();
 
         for idx in params.idxs() {
             let pos = positions[idx];
