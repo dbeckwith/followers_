@@ -204,7 +204,6 @@ fn App() -> Element {
     let frame_idx = world_renderer
         .map(|world_renderer| world_renderer.frame_idx())
         .unwrap_or(0);
-    let frame_no = frame_idx + 1;
 
     rsx! {
         canvas {
@@ -293,7 +292,7 @@ fn App() -> Element {
                 }
                 div {
                     class: "param-value",
-                    "{frame_no}"
+                    "{frame_idx}"
                 }
             }
             div {
