@@ -139,6 +139,8 @@ impl WorldRenderer {
         let image = &mut *self.image.borrow_mut();
         let context = &*self.context.borrow_mut();
 
+        self.frame_idx.store(0, atomic::Ordering::SeqCst);
+
         image.clear();
 
         let image_data = image.to_image_data();
