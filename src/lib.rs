@@ -46,6 +46,7 @@ fn App() -> Element {
         seed: 0x27e3771584a46455,
         particle_count: 1000,
         particle_alpha: 6.0,
+        acc_limit: -1.0,
     });
     let mut world = use_signal(|| World::new(*params.peek()).unwrap());
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
@@ -78,6 +79,15 @@ fn App() -> Element {
             };
             params.write().particle_alpha = particle_alpha;
         });
+
+    let on_input_acc_limit = use_callback(move |event: Event<FormData>| {
+        let acc_limit = if let Ok(acc_limit) = event.parsed() {
+            acc_limit
+        } else {
+            return;
+        };
+        params.write().acc_limit = acc_limit;
+    });
 
     let on_click_pause_resume = use_callback(move |_: Event<MouseData>| {
         if let Some(world_renderer) = &mut *world_renderer.write() {
@@ -112,6 +122,7 @@ fn App() -> Element {
                     seed,
                     particle_count,
                     particle_alpha: _,
+                    acc_limit: _,
                 } = params;
                 anchor.set_download(&format!(
                     "{particle_count}-0x{seed:016x}.png"
@@ -174,7 +185,10 @@ fn App() -> Element {
         seed,
         particle_count,
         particle_alpha,
+        acc_limit,
     } = *world.read().params();
+
+    let acc_limit_display = (2.0f32.powf(acc_limit) * 1000.0).round() / 1000.0;
 
     let paused = world_renderer
         .read()
@@ -236,6 +250,27 @@ fn App() -> Element {
                         max: 100,
                         value: particle_alpha,
                         oninput: on_input_particle_alpha,
+                    }
+                }
+            }
+            div {
+                class: "param acc-limit",
+                div {
+                    class: "param-label",
+                    "acc limit: "
+                }
+                div {
+                    class: "param-value",
+                    "{acc_limit_display}"
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "range",
+                        min: -10,
+                        max: 10,
+                        value: acc_limit,
+                        oninput: on_input_acc_limit,
                     }
                 }
             }

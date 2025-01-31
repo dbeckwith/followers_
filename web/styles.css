@@ -84,6 +84,14 @@ canvas {
   width: 5em;
 }
 
+.param.acc-limit .param-value {
+  width: 3em;
+}
+
+.param.acc-limit .param-control input {
+  width: 10em;
+}
+
 .control {
   display: flex;
   flex-direction: row;

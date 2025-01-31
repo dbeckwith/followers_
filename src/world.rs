@@ -22,12 +22,14 @@ pub struct Params {
     pub seed: u64,
     pub particle_count: usize,
     pub particle_alpha: f32,
+    pub acc_limit: f32,
 }
 
 impl Params {
     fn check(&mut self) -> Result<()> {
         ensure!(self.particle_count > 2);
         self.particle_alpha = self.particle_alpha.clamp(1.0, 100.0);
+        self.acc_limit = self.acc_limit.clamp(-10.0, 10.0);
         Ok(())
     }
 
@@ -44,8 +46,9 @@ impl World {
             seed,
             particle_count,
             particle_alpha,
+            acc_limit,
         } = params;
-        info!("world init - 0x{seed:016x}:{particle_count}");
+        info!("world init - 0x{seed:016x}:{particle_count}:2^{acc_limit}");
 
         let mut seeds = ChaCha20Rng::seed_from_u64(seed)
             .sample_iter(rand::distributions::Standard);
@@ -128,6 +131,14 @@ impl World {
             partners,
             colors,
         } = self;
+        let Params {
+            seed: _,
+            particle_count: _,
+            particle_alpha: _,
+            acc_limit,
+        } = *params;
+
+        let acc_limit = 2.0f32.powf(acc_limit);
 
         for idx in params.idxs() {
             let pos = positions[idx];
@@ -145,7 +156,7 @@ impl World {
             let target_pos = p2 * t + p1 * (1.0 - t);
 
             let acc = target_pos - pos;
-            let acc = acc.clamp_length_max(0.5);
+            let acc = acc.clamp_length_max(acc_limit);
             *vel += acc;
             *vel = vel.clamp_length_max(1.0);
         }
