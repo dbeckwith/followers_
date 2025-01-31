@@ -19,20 +19,15 @@ pub struct World {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Params {
-    pub particle_count: usize,
     pub seed: u64,
+    pub particle_count: usize,
+    pub particle_alpha: f32,
 }
 
 impl Params {
-    pub fn new(particle_count: usize, seed: u64) -> Self {
-        Self {
-            particle_count,
-            seed,
-        }
-    }
-
-    fn check(&self) -> Result<()> {
+    fn check(&mut self) -> Result<()> {
         ensure!(self.particle_count > 2);
+        self.particle_alpha = self.particle_alpha.clamp(1.0, 100.0);
         Ok(())
     }
 
@@ -42,12 +37,13 @@ impl Params {
 }
 
 impl World {
-    pub fn new(params: Params) -> Result<Self> {
+    pub fn new(mut params: Params) -> Result<Self> {
         params.check()?;
 
         let Params {
-            particle_count,
             seed,
+            particle_count,
+            particle_alpha,
         } = params;
         info!("world init - 0x{seed:016x}:{particle_count}");
 
@@ -106,7 +102,7 @@ impl World {
                     rng.gen_range(0.0..=240.0),
                     rng.gen_range(20.0..=40.0),
                     80.0,
-                    6.0,
+                    particle_alpha,
                 )
             })
             .collect::<Vec<_>>());

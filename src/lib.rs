@@ -42,7 +42,11 @@ fn start() -> Result<(), JsValue> {
 #[component]
 fn App() -> Element {
     let mut seed_rng = use_signal(thread_rng);
-    let mut params = use_signal(|| Params::new(1000, 0x27e3771584a46455));
+    let mut params = use_signal(|| Params {
+        seed: 0x27e3771584a46455,
+        particle_count: 1000,
+        particle_alpha: 6.0,
+    });
     let mut world = use_signal(|| World::new(*params.peek()).unwrap());
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
 
@@ -63,6 +67,16 @@ fn App() -> Element {
                 return;
             };
             params.write().particle_count = particle_count;
+        });
+
+    let on_input_particle_alpha =
+        use_callback(move |event: Event<FormData>| {
+            let particle_alpha = if let Ok(particle_alpha) = event.parsed() {
+                particle_alpha
+            } else {
+                return;
+            };
+            params.write().particle_alpha = particle_alpha;
         });
 
     let on_click_pause_resume = use_callback(move |_: Event<MouseData>| {
@@ -95,8 +109,9 @@ fn App() -> Element {
                 let anchor =
                     anchor.dyn_into::<web_sys::HtmlAnchorElement>().unwrap();
                 let Params {
-                    particle_count,
                     seed,
+                    particle_count,
+                    particle_alpha: _,
                 } = params;
                 anchor.set_download(&format!(
                     "{particle_count}-0x{seed:016x}.png"
@@ -156,8 +171,9 @@ fn App() -> Element {
     });
 
     let Params {
-        particle_count,
         seed,
+        particle_count,
+        particle_alpha,
     } = *world.read().params();
 
     let paused = world_renderer
@@ -203,6 +219,23 @@ fn App() -> Element {
                         max: 1000000,
                         value: particle_count,
                         oninput: on_input_particle_count,
+                    }
+                }
+            }
+            div {
+                class: "param alpha",
+                div {
+                    class: "param-label",
+                    "alpha: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 1,
+                        max: 100,
+                        value: particle_alpha,
+                        oninput: on_input_particle_alpha,
                     }
                 }
             }
