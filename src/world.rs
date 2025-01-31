@@ -127,8 +127,12 @@ impl World {
             let p2 = positions[p2];
             let vel = &mut velocities[idx];
 
-            let t = (pos - p1).dot(p2 - p1) / p2.distance_squared(p1);
-            let t = t.max(1.0);
+            let p_dist_sq = p2.distance_squared(p1);
+            let t = if p_dist_sq == 0.0 {
+                1.0
+            } else {
+                ((pos - p1).dot(p2 - p1) / p_dist_sq).max(1.0)
+            };
             let target_pos = p2 * t + p1 * (1.0 - t);
 
             let acc = target_pos - pos;
