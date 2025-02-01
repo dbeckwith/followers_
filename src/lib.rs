@@ -236,30 +236,23 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-                let anchor = document.create_element("a").unwrap();
-                let anchor =
-                    anchor.dyn_into::<web_sys::HtmlAnchorElement>().unwrap();
-                let Params {
-                    seed,
-                    particle_count,
-                    particle_color_alpha: _,
-                    particle_color_hue_mid: _,
-                    particle_color_hue_spread: _,
-                    particle_color_saturation_mid: _,
-                    particle_color_saturation_spread: _,
-                    particle_color_value: _,
-                    acc_limit: _,
-                } = params;
-                anchor.set_download(&format!(
-                    "{particle_count}-0x{seed:016x}.png"
-                ));
                 let url =
                     web_sys::Url::create_object_url_with_blob(&blob).unwrap();
-                anchor.set_href(&url);
-                let body = document.body().unwrap();
-                body.append_child(&anchor).unwrap();
-                anchor.click();
-                body.remove_child(&anchor).unwrap();
+                let file_name = {
+                    let Params {
+                        seed,
+                        particle_count,
+                        particle_color_alpha: _,
+                        particle_color_hue_mid: _,
+                        particle_color_hue_spread: _,
+                        particle_color_saturation_mid: _,
+                        particle_color_saturation_spread: _,
+                        particle_color_value: _,
+                        acc_limit: _,
+                    } = params;
+                    format!("{particle_count}-0x{seed:016x}.png")
+                };
+                download_url(&document, &url, &file_name);
                 web_sys::Url::revoke_object_url(&url).unwrap();
             },
         );
@@ -267,6 +260,35 @@ fn App() -> Element {
             .to_blob(closure.as_ref().unchecked_ref())
             .unwrap();
         closure.forget(); // FIXME: don't leak
+    });
+
+    let on_click_save_svg = use_callback(move |_: Event<MouseData>| {
+        let file_name = {
+            let Params {
+                seed,
+                particle_count,
+                particle_color_alpha: _,
+                particle_color_hue_mid: _,
+                particle_color_hue_spread: _,
+                particle_color_saturation_mid: _,
+                particle_color_saturation_spread: _,
+                particle_color_value: _,
+                acc_limit: _,
+            } = *params.read();
+            format!("{particle_count}-0x{seed:016x}.svg")
+        };
+        let background_color = *background_color.read();
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        defer(&window, move || {
+            let svg = world.peek().generate_svg(background_color);
+            // TODO: handle errors?
+            let blob = web_sys::Blob::new_with_str_sequence(&vec![svg].into())
+                .unwrap();
+            let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+            download_url(&document, &url, &file_name);
+            web_sys::Url::revoke_object_url(&url).unwrap();
+        });
     });
 
     use_effect(move || {
@@ -621,9 +643,35 @@ fn App() -> Element {
                 class: "control",
                 button {
                     onclick: on_click_save,
-                    "save"
+                    "save png"
+                }
+            }
+            div {
+                class: "control",
+                button {
+                    onclick: on_click_save_svg,
+                    "save svg"
                 }
             }
         }
     }
+}
+
+fn download_url(document: &web_sys::Document, url: &str, file_name: &str) {
+    let anchor = document.create_element("a").unwrap();
+    let anchor = anchor.dyn_into::<web_sys::HtmlAnchorElement>().unwrap();
+    anchor.set_download(file_name);
+    anchor.set_href(url);
+    let body = document.body().unwrap();
+    body.append_child(&anchor).unwrap();
+    anchor.click();
+    body.remove_child(&anchor).unwrap();
+}
+
+fn defer(window: &web_sys::Window, body: impl FnMut() + 'static) {
+    let closure = Closure::<dyn FnMut()>::new(body);
+    window
+        .set_timeout_with_callback(closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget(); // FIXME: don't leak
 }

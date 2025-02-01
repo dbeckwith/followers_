@@ -1,3 +1,4 @@
+use std::fmt;
 use zerocopy::{Immutable, IntoBytes};
 
 #[derive(Debug, Clone, Copy, IntoBytes, Immutable)]
@@ -115,5 +116,18 @@ impl Color {
         alpha = alpha.clamp(0.0, 1.0);
         self.a = (self.a as f32 * alpha) as u8;
         self
+    }
+
+    pub fn fmt_hex(self) -> ColorHex {
+        ColorHex(self)
+    }
+}
+
+pub struct ColorHex(Color);
+
+impl fmt::Display for ColorHex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ColorHex(Color { r, g, b, a }) = self;
+        write!(f, "{r:02x}{g:02x}{b:02x}{a:02x}")
     }
 }

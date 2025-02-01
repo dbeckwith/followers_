@@ -9,12 +9,16 @@ use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use std::f32::consts::PI;
 
+// enough for a minute of 1000 particles
+const HISTORY_MEMORY_CAP: usize = 3600 * 1000 * size_of::<Vec2>();
+
 pub struct World {
     params: Params,
     positions: Vec<Vec2>,
     velocities: Vec<Vec2>,
     partners: Vec<[usize; 2]>,
     colors: Vec<Color>,
+    history: Vec<Vec<Vec2>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -127,17 +131,16 @@ impl World {
             })
             .collect::<Vec<_>>());
 
+        let history = vec![positions.clone()];
+
         Ok(Self {
             params,
             positions,
             velocities,
             partners,
             colors,
+            history,
         })
-    }
-
-    pub fn params(&self) -> &Params {
-        &self.params
     }
 
     pub fn update(&mut self) {
@@ -147,10 +150,11 @@ impl World {
             velocities,
             partners,
             colors: _,
+            history,
         } = self;
         let Params {
             seed: _,
-            particle_count: _,
+            particle_count,
             particle_color_hue_mid: _,
             particle_color_hue_spread: _,
             particle_color_saturation_mid: _,
@@ -186,6 +190,17 @@ impl World {
         for idx in params.idxs() {
             positions[idx] += velocities[idx];
         }
+
+        if (history.len() + 1) * particle_count * size_of::<Vec2>()
+            > HISTORY_MEMORY_CAP
+        {
+            // pop oldest
+            // SAFETY: history is never empty since it starts off containing the
+            // initial positions
+            history.swap_remove(0);
+            history.rotate_left(1);
+        }
+        history.push(positions.clone());
     }
 
     pub fn render(&self, image: &mut Image) {
@@ -195,6 +210,7 @@ impl World {
             velocities: _,
             partners: _,
             colors,
+            history: _,
         } = self;
 
         let hw = (image.width() as f32) / 2.0;
@@ -206,5 +222,71 @@ impl World {
             let color = colors[idx];
             image.draw_particle(x, y, color);
         }
+    }
+
+    pub fn generate_svg(&self, background_color: Color) -> String {
+        use std::fmt::Write;
+
+        let Self {
+            params,
+            positions: _,
+            velocities: _,
+            partners: _,
+            colors,
+            history,
+        } = self;
+
+        let mut s = String::new();
+
+        macro_rules! w {
+            ($($args:tt)*) => (write!(&mut s, $($args)*).unwrap())
+        }
+        macro_rules! wln {
+            ($($args:tt)*) => (writeln!(&mut s, $($args)*).unwrap())
+        }
+
+        let (x, y, x1, y1) = history
+            .iter()
+            .flatten()
+            .copied()
+            .fold(None, |max, Vec2 { x, y }| {
+                Some(max.map_or(
+                    (x, y, x, y),
+                    |(min_x, min_y, max_x, max_y)| {
+                        (x.min(min_x), y.min(min_y), x.max(max_x), y.max(max_y))
+                    },
+                ))
+            })
+            .unwrap_or((0.0, 0.0, 0.0, 0.0));
+        let w = x1 - x;
+        let h = y1 - y;
+        let bg = background_color.fmt_hex();
+        wln!(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
+        w!(r#"<svg"#);
+        w!(r#" xmlns="http://www.w3.org/2000/svg""#);
+        w!(r#" width="{w}""#);
+        w!(r#" height="{h}""#);
+        w!(r#" viewBox="{x} {y} {w} {h}""#);
+        w!(r#" style="background: #{bg};""#);
+        wln!(r#">"#);
+        for idx in params.idxs() {
+            let color = colors[idx].fmt_hex();
+            w!(r#"  <path"#);
+            w!(r#" fill="none""#);
+            w!(r##" stroke="#{color}""##);
+            w!(r#" stroke-linejoin="round""#);
+            w!(r#" d=""#);
+            let mut cmd = 'M';
+            for step in history {
+                let Vec2 { x, y } = step[idx];
+                w!(r#" {cmd} {x} {y}"#);
+                cmd = 'L';
+            }
+            w!(r#"""#);
+            wln!(r#" />"#);
+        }
+        wln!(r#"</svg>"#);
+
+        s
     }
 }
