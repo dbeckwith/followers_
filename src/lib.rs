@@ -8,6 +8,8 @@ mod world;
 use crate::{
     color::Color,
     hooks::{use_element, use_element_size},
+    image::Image,
+    math::lerp,
     renderer::WorldRenderer,
     world::{Params, World},
 };
@@ -57,6 +59,9 @@ const MAX_PARTICLE_COLOR_ALPHA: f32 = 100.0;
 const MIN_ACC_LIMIT: f32 = -10.0;
 const MAX_ACC_LIMIT: f32 = 10.0;
 
+const PALETTE_WIDTH: usize = 100;
+const PALETTE_HEIGHT: usize = 40;
+
 #[component]
 fn App() -> Element {
     let mut seed_rng = use_signal(thread_rng);
@@ -75,10 +80,17 @@ fn App() -> Element {
     let mut frame_limit = use_signal(|| 60 * 60);
     let mut world = use_signal(|| World::new(*params.peek()).unwrap());
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
+    let mut palette_image = use_signal(|| {
+        Image::new(PALETTE_WIDTH, PALETTE_HEIGHT, Color::transparent())
+    });
 
-    let (canvas_element, on_canvas_mounted) =
+    let (world_canvas_element, on_world_canvas_mounted) =
         use_element::<web_sys::HtmlCanvasElement>();
-    let canvas_size = use_element_size(canvas_element.read().clone());
+    let world_canvas_size =
+        use_element_size(world_canvas_element.read().clone());
+
+    let (palette_canvas_element, on_palette_canvas_mounted) =
+        use_element::<web_sys::HtmlCanvasElement>();
 
     let on_click_rand_seed = use_callback(move |_: Event<MouseData>| {
         let seed = seed_rng.write().gen();
@@ -208,14 +220,15 @@ fn App() -> Element {
     });
 
     let on_click_save = use_callback(move |_: Event<MouseData>| {
-        let canvas_element = &*canvas_element.read();
-        let canvas_element = if let Some(canvas_element) = canvas_element {
-            canvas_element
-        } else {
-            return;
-        };
+        let world_canvas_element = &*world_canvas_element.read();
+        let world_canvas_element =
+            if let Some(world_canvas_element) = world_canvas_element {
+                world_canvas_element
+            } else {
+                return;
+            };
         let params = *params.read();
-        let document = canvas_element.owner_document().unwrap();
+        let document = world_canvas_element.owner_document().unwrap();
         let closure = Closure::<dyn FnMut(Option<web_sys::Blob>)>::new(
             move |blob: Option<web_sys::Blob>| {
                 let blob = if let Some(blob) = blob {
@@ -250,7 +263,7 @@ fn App() -> Element {
                 web_sys::Url::revoke_object_url(&url).unwrap();
             },
         );
-        canvas_element
+        world_canvas_element
             .to_blob(closure.as_ref().unchecked_ref())
             .unwrap();
         closure.forget(); // FIXME: don't leak
@@ -272,32 +285,90 @@ fn App() -> Element {
     });
 
     use_effect(move || {
-        let canvas_element = &*canvas_element.read();
-        let canvas_element = if let Some(canvas_element) = canvas_element {
-            canvas_element
-        } else {
-            return;
-        };
-        let canvas_size = *canvas_size.read();
-        let canvas_size = if let Some(canvas_size) = canvas_size {
-            canvas_size
-        } else {
-            return;
-        };
-        canvas_element.set_width(canvas_size.width as u32);
-        canvas_element.set_height(canvas_size.height as u32);
+        let world_canvas_element = &*world_canvas_element.read();
+        let world_canvas_element =
+            if let Some(world_canvas_element) = world_canvas_element {
+                world_canvas_element
+            } else {
+                return;
+            };
+        let world_canvas_size = *world_canvas_size.read();
+        let world_canvas_size =
+            if let Some(world_canvas_size) = world_canvas_size {
+                world_canvas_size
+            } else {
+                return;
+            };
+        world_canvas_element.set_width(world_canvas_size.width as u32);
+        world_canvas_element.set_height(world_canvas_size.height as u32);
         world_renderer.with_mut(|renderer| {
             if let Some(renderer) = renderer {
-                renderer.update(canvas_element);
+                renderer.update(world_canvas_element);
             } else {
                 *renderer = Some(WorldRenderer::new(
-                    canvas_element,
+                    world_canvas_element,
                     world,
                     background_color,
                     frame_limit,
                 ));
             }
         });
+    });
+
+    use_effect(move || {
+        let Params {
+            seed: _,
+            particle_count: _,
+            particle_color_hue_mid,
+            particle_color_hue_spread,
+            particle_color_saturation_mid,
+            particle_color_saturation_spread,
+            particle_color_value,
+            particle_color_alpha: _,
+            acc_limit: _,
+        } = *params.read();
+        let palette_image = &mut *palette_image.write();
+        for y in 0..PALETTE_HEIGHT {
+            for x in 0..PALETTE_WIDTH {
+                let color = Color::hsva(
+                    lerp(
+                        x as f32,
+                        0.0,
+                        (PALETTE_WIDTH - 1) as f32,
+                        particle_color_hue_mid
+                            - particle_color_hue_spread / 2.0,
+                        particle_color_hue_mid
+                            + particle_color_hue_spread / 2.0,
+                    ),
+                    lerp(
+                        y as f32,
+                        (PALETTE_HEIGHT - 1) as f32,
+                        0.0,
+                        particle_color_saturation_mid
+                            - particle_color_saturation_spread / 2.0,
+                        particle_color_saturation_mid
+                            + particle_color_saturation_spread / 2.0,
+                    ),
+                    particle_color_value,
+                    100.0,
+                );
+                palette_image.put_pixel(x, y, color);
+            }
+        }
+    });
+
+    use_effect(move || {
+        let palette_canvas_element = &*palette_canvas_element.read();
+        if let Some(palette_canvas_element) = palette_canvas_element {
+            let context = palette_canvas_element
+                .get_context("2d")
+                .unwrap()
+                .unwrap()
+                .dyn_into::<web_sys::CanvasRenderingContext2d>()
+                .unwrap();
+            let image_data = palette_image.read().to_image_data();
+            context.put_image_data(&image_data, 0.0, 0.0).unwrap();
+        }
     });
 
     // re-render when world updates
@@ -327,7 +398,8 @@ fn App() -> Element {
 
     rsx! {
         canvas {
-            onmounted: on_canvas_mounted,
+            class: "world",
+            onmounted: on_world_canvas_mounted,
         }
         div {
             class: "ui",
@@ -465,6 +537,21 @@ fn App() -> Element {
                         max: MAX_PARTICLE_COLOR_ALPHA,
                         value: particle_color_alpha,
                         oninput: on_input_particle_color_alpha,
+                    }
+                }
+            }
+            div {
+                class: "param particle-color-palette",
+                div {
+                    class: "param-label",
+                    "colors: "
+                }
+                div {
+                    class: "param-value",
+                    canvas {
+                        width: PALETTE_WIDTH,
+                        height: PALETTE_HEIGHT,
+                        onmounted: on_palette_canvas_mounted,
                     }
                 }
             }

@@ -35,7 +35,7 @@ input {
   font-size: inherit;
 }
 
-canvas {
+canvas.world {
   position: absolute;
   left: 0;
   top: 0;

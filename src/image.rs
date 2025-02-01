@@ -26,6 +26,10 @@ impl Image {
         self.height
     }
 
+    pub fn put_pixel(&mut self, x: usize, y: usize, color: Color) {
+        self.pixels[x + y * self.width] = color;
+    }
+
     pub fn blend_pixel(&mut self, x: usize, y: usize, color: Color) {
         let p = &mut self.pixels[x + y * self.width];
         *p = p.blend(color);
