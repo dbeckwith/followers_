@@ -31,6 +31,44 @@ impl Image {
         *p = p.blend(color);
     }
 
+    pub fn draw_particle(&mut self, x: f32, y: f32, color: Color) {
+        macro_rules! calc {
+            ($x:expr, $w:expr) => {{
+                let w = $w;
+                let mut x = $x;
+                let wf = w as f32;
+                x -= 0.5;
+                if x <= -1.0 || x >= wf {
+                    (None, None)
+                } else if x < 0.0 {
+                    let xf = 1.0 + x;
+                    (None, Some((0, xf)))
+                } else if x >= wf - 1.0 {
+                    let xf = x.fract();
+                    (Some((w - 1, (1.0 - xf))), None)
+                } else {
+                    let xf = x.fract();
+                    let x = x as usize;
+                    (Some((x, (1.0 - xf))), Some((x + 1, xf)))
+                }
+            }};
+        }
+        macro_rules! write {
+            ($x:expr, $y:expr) => {
+                if let (Some((x, xf)), Some((y, yf))) = ($x, $y) {
+                    let c = color.fade(xf * yf);
+                    self.blend_pixel(x, y, c);
+                }
+            };
+        }
+        let (x0, x1) = calc!(x, self.width);
+        let (y0, y1) = calc!(y, self.height);
+        write!(x0, y0);
+        write!(x0, y1);
+        write!(x1, y0);
+        write!(x1, y1);
+    }
+
     pub fn to_image_data(&self) -> web_sys::ImageData {
         let data = self.pixels.as_bytes();
         let sw = self.width as u32;

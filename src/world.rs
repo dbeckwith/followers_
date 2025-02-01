@@ -175,34 +175,14 @@ impl World {
             colors,
         } = self;
 
-        let w = image.width();
-        let h = image.height();
-        let wf = w as f32;
-        let hf = h as f32;
+        let hw = (image.width() as f32) / 2.0;
+        let hh = (image.height() as f32) / 2.0;
         for idx in params.idxs() {
             let pos = positions[idx];
-            let x = pos.x + wf / 2.0;
-            let y = pos.y + hf / 2.0;
-            if x < 0.0 || x >= wf || y < 0.0 || y >= hf {
-                continue;
-            }
-            let xf = x.fract();
-            let yf = y.fract();
-            let x = x as usize;
-            let y = y as usize;
-
+            let x = pos.x + hw;
+            let y = pos.y + hh;
             let color = colors[idx];
-
-            image.blend_pixel(x, y, color.fade((1.0 - xf) * (1.0 - yf)));
-            if x + 1 < w {
-                image.blend_pixel(x + 1, y, color.fade(xf * (1.0 - yf)));
-            }
-            if y + 1 < h {
-                image.blend_pixel(x, y + 1, color.fade((1.0 - xf) * yf));
-            }
-            if x + 1 < w && y + 1 < h {
-                image.blend_pixel(x + 1, y + 1, color.fade(xf * yf));
-            }
+            image.draw_particle(x, y, color);
         }
     }
 }
