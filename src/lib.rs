@@ -261,7 +261,7 @@ fn App() -> Element {
                 class: "param alpha",
                 div {
                     class: "param-label",
-                    "alpha: "
+                    "opacity: "
                 }
                 div {
                     class: "param-control",
