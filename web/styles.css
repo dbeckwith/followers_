@@ -76,12 +76,28 @@ canvas {
   font-size: 12px;
 }
 
-.param.count .param-control input {
+.param.particle-count .param-control input {
   width: 6em;
 }
 
-.param.alpha .param-control input {
-  width: 3em;
+.param.particle-color-hue-mid .param-control input {
+  width: 4em;
+}
+
+.param.particle-color-hue-spread .param-control input {
+  width: 4em;
+}
+
+.param.particle-color-saturation-mid .param-control input {
+  width: 4em;
+}
+
+.param.particle-color-saturation-spread .param-control input {
+  width: 4em;
+}
+
+.param.particle-color-alpha .param-control input {
+  width: 4em;
 }
 
 .param.acc-limit .param-value {

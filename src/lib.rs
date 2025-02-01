@@ -46,7 +46,12 @@ fn App() -> Element {
     let mut params = use_signal(|| Params {
         seed: 0x27e3771584a46455,
         particle_count: 1000,
-        particle_alpha: 6.0,
+        particle_color_hue_mid: 120.0,
+        particle_color_hue_spread: 240.0,
+        particle_color_saturation_mid: 70.0,
+        particle_color_saturation_spread: 20.0,
+        particle_color_value: 100.0,
+        particle_color_alpha: 6.0,
         acc_limit: -1.0,
     });
     let background_color = use_signal(|| Color::hex(0x000000ff));
@@ -73,23 +78,85 @@ fn App() -> Element {
             params.write().particle_count = particle_count;
         });
 
-    let on_input_particle_alpha =
+    let on_input_particle_color_hue_mid =
         use_callback(move |event: Event<FormData>| {
-            let particle_alpha = if let Ok(particle_alpha) = event.parsed() {
-                particle_alpha
-            } else {
-                return;
-            };
-            params.write().particle_alpha = particle_alpha;
+            let particle_hue_mid =
+                if let Ok(particle_hue_mid) = event.parsed::<f32>() {
+                    particle_hue_mid
+                } else {
+                    return;
+                };
+            params.write().particle_color_hue_mid =
+                particle_hue_mid.clamp(0.0, 360.0);
+        });
+
+    let on_input_particle_color_hue_spread =
+        use_callback(move |event: Event<FormData>| {
+            let particle_hue_spread =
+                if let Ok(particle_hue_spread) = event.parsed::<f32>() {
+                    particle_hue_spread
+                } else {
+                    return;
+                };
+            params.write().particle_color_hue_spread =
+                particle_hue_spread.clamp(0.0, 360.0);
+        });
+
+    let on_input_particle_color_saturation_mid =
+        use_callback(move |event: Event<FormData>| {
+            let particle_saturation_mid =
+                if let Ok(particle_saturation_mid) = event.parsed::<f32>() {
+                    particle_saturation_mid
+                } else {
+                    return;
+                };
+            params.write().particle_color_saturation_mid =
+                particle_saturation_mid.clamp(0.0, 100.0);
+        });
+
+    let on_input_particle_color_saturation_spread =
+        use_callback(move |event: Event<FormData>| {
+            let particle_saturation_spread =
+                if let Ok(particle_saturation_spread) = event.parsed::<f32>() {
+                    particle_saturation_spread
+                } else {
+                    return;
+                };
+            params.write().particle_color_saturation_spread =
+                particle_saturation_spread.clamp(0.0, 100.0);
+        });
+
+    let on_input_particle_color_value =
+        use_callback(move |event: Event<FormData>| {
+            let particle_value =
+                if let Ok(particle_value) = event.parsed::<f32>() {
+                    particle_value
+                } else {
+                    return;
+                };
+            params.write().particle_color_value =
+                particle_value.clamp(1.0, 100.0);
+        });
+
+    let on_input_particle_color_alpha =
+        use_callback(move |event: Event<FormData>| {
+            let particle_alpha =
+                if let Ok(particle_alpha) = event.parsed::<f32>() {
+                    particle_alpha
+                } else {
+                    return;
+                };
+            params.write().particle_color_alpha =
+                particle_alpha.clamp(1.0, 100.0);
         });
 
     let on_input_acc_limit = use_callback(move |event: Event<FormData>| {
-        let acc_limit = if let Ok(acc_limit) = event.parsed() {
+        let acc_limit = if let Ok(acc_limit) = event.parsed::<f32>() {
             acc_limit
         } else {
             return;
         };
-        params.write().acc_limit = acc_limit;
+        params.write().acc_limit = acc_limit.clamp(-10.0, 10.0);
     });
 
     let on_input_frame_limit = use_callback(move |event: Event<FormData>| {
@@ -133,7 +200,12 @@ fn App() -> Element {
                 let Params {
                     seed,
                     particle_count,
-                    particle_alpha: _,
+                    particle_color_alpha: _,
+                    particle_color_hue_mid: _,
+                    particle_color_hue_spread: _,
+                    particle_color_saturation_mid: _,
+                    particle_color_saturation_spread: _,
+                    particle_color_value: _,
                     acc_limit: _,
                 } = params;
                 anchor.set_download(&format!(
@@ -202,7 +274,12 @@ fn App() -> Element {
     let Params {
         seed,
         particle_count,
-        particle_alpha,
+        particle_color_hue_mid,
+        particle_color_hue_spread,
+        particle_color_saturation_mid,
+        particle_color_saturation_spread,
+        particle_color_value,
+        particle_color_alpha,
         acc_limit,
     } = *world.read().params();
 
@@ -241,7 +318,7 @@ fn App() -> Element {
                 }
             }
             div {
-                class: "param count",
+                class: "param particle-count",
                 div {
                     class: "param-label",
                     "particles: "
@@ -258,7 +335,92 @@ fn App() -> Element {
                 }
             }
             div {
-                class: "param alpha",
+                class: "param particle-color-hue-mid",
+                div {
+                    class: "param-label",
+                    "hue mid: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 0,
+                        max: 360,
+                        value: particle_color_hue_mid,
+                        oninput: on_input_particle_color_hue_mid,
+                    }
+                }
+            }
+            div {
+                class: "param particle-color-hue-spread",
+                div {
+                    class: "param-label",
+                    "hue spread: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 0,
+                        max: 360,
+                        value: particle_color_hue_spread,
+                        oninput: on_input_particle_color_hue_spread,
+                    }
+                }
+            }
+            div {
+                class: "param particle-color-saturation-mid",
+                div {
+                    class: "param-label",
+                    "saturation mid: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 0,
+                        max: 100,
+                        value: particle_color_saturation_mid,
+                        oninput: on_input_particle_color_saturation_mid,
+                    }
+                }
+            }
+            div {
+                class: "param particle-color-saturation-spread",
+                div {
+                    class: "param-label",
+                    "saturation spread: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 0,
+                        max: 100,
+                        value: particle_color_saturation_spread,
+                        oninput: on_input_particle_color_saturation_spread,
+                    }
+                }
+            }
+            div {
+                class: "param particle-color-value",
+                div {
+                    class: "param-label",
+                    "brightness: "
+                }
+                div {
+                    class: "param-control",
+                    input {
+                        r#type: "number",
+                        min: 1,
+                        max: 100,
+                        value: particle_color_value,
+                        oninput: on_input_particle_color_value,
+                    }
+                }
+            }
+            div {
+                class: "param particle-color-alpha",
                 div {
                     class: "param-label",
                     "opacity: "
@@ -269,8 +431,8 @@ fn App() -> Element {
                         r#type: "number",
                         min: 1,
                         max: 100,
-                        value: particle_alpha,
-                        oninput: on_input_particle_alpha,
+                        value: particle_color_alpha,
+                        oninput: on_input_particle_color_alpha,
                     }
                 }
             }

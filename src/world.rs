@@ -21,15 +21,18 @@ pub struct World {
 pub struct Params {
     pub seed: u64,
     pub particle_count: usize,
-    pub particle_alpha: f32,
+    pub particle_color_hue_mid: f32,
+    pub particle_color_hue_spread: f32,
+    pub particle_color_saturation_mid: f32,
+    pub particle_color_saturation_spread: f32,
+    pub particle_color_value: f32,
+    pub particle_color_alpha: f32,
     pub acc_limit: f32,
 }
 
 impl Params {
-    fn check(&mut self) -> Result<()> {
+    fn check(&self) -> Result<()> {
         ensure!(self.particle_count > 2);
-        self.particle_alpha = self.particle_alpha.clamp(1.0, 100.0);
-        self.acc_limit = self.acc_limit.clamp(-10.0, 10.0);
         Ok(())
     }
 
@@ -39,13 +42,18 @@ impl Params {
 }
 
 impl World {
-    pub fn new(mut params: Params) -> Result<Self> {
+    pub fn new(params: Params) -> Result<Self> {
         params.check()?;
 
         let Params {
             seed,
             particle_count,
-            particle_alpha,
+            particle_color_hue_mid,
+            particle_color_hue_spread,
+            particle_color_saturation_mid,
+            particle_color_saturation_spread,
+            particle_color_value,
+            particle_color_alpha,
             acc_limit,
         } = params;
         info!("world init - 0x{seed:016x}:{particle_count}:2^{acc_limit}");
@@ -102,10 +110,19 @@ impl World {
             .idxs()
             .map(|_idx| {
                 Color::hsva(
-                    rng.gen_range(0.0..=240.0),
-                    rng.gen_range(60.0..=80.0),
-                    100.0,
-                    particle_alpha,
+                    rng.gen_range(
+                        particle_color_hue_mid - particle_color_hue_spread / 2.0
+                            ..=particle_color_hue_mid
+                                + particle_color_hue_spread / 2.0,
+                    ),
+                    rng.gen_range(
+                        particle_color_saturation_mid
+                            - particle_color_saturation_spread / 2.0
+                            ..=particle_color_saturation_mid
+                                + particle_color_saturation_spread / 2.0,
+                    ),
+                    particle_color_value,
+                    particle_color_alpha,
                 )
             })
             .collect::<Vec<_>>());
@@ -134,7 +151,12 @@ impl World {
         let Params {
             seed: _,
             particle_count: _,
-            particle_alpha: _,
+            particle_color_hue_mid: _,
+            particle_color_hue_spread: _,
+            particle_color_saturation_mid: _,
+            particle_color_saturation_spread: _,
+            particle_color_value: _,
+            particle_color_alpha: _,
             acc_limit,
         } = *params;
 
