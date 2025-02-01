@@ -9,6 +9,7 @@ use std::{
 use wasm_bindgen::prelude::*;
 
 pub struct WorldRenderer {
+    world: Signal<World>,
     image: Rc<RefCell<Image>>,
     context: Rc<RefCell<web_sys::CanvasRenderingContext2d>>,
     paused: Rc<AtomicBool>,
@@ -34,7 +35,8 @@ impl WorldRenderer {
 
         let width = canvas.width() as usize;
         let height = canvas.height() as usize;
-        let image = Image::new(width, height, *background.peek());
+        let mut image = Image::new(width, height, *background.peek());
+        world.peek().render(&mut image);
 
         let image_data = image.to_image_data();
         context.put_image_data(&image_data, 0.0, 0.0).unwrap();
@@ -70,9 +72,11 @@ impl WorldRenderer {
                     }
                 }
                 debug!("update");
+                let mut world = world.write();
+                world.update();
                 let image = &mut *image.borrow_mut();
                 let context = &mut *context.borrow_mut();
-                world.write().update(image);
+                world.render(image);
                 let image_data = image.to_image_data();
                 context.put_image_data(&image_data, 0.0, 0.0).unwrap();
                 frame_idx.fetch_add(1, atomic::Ordering::SeqCst);
@@ -95,6 +99,7 @@ impl WorldRenderer {
         *closure_handle.borrow_mut() = Some(closure);
 
         WorldRenderer {
+            world,
             image,
             context,
             paused,
@@ -165,6 +170,7 @@ impl WorldRenderer {
         self.frame_idx.store(0, atomic::Ordering::SeqCst);
 
         image.clear();
+        self.world.peek().render(image);
 
         let image_data = image.to_image_data();
         context.put_image_data(&image_data, 0.0, 0.0).unwrap();

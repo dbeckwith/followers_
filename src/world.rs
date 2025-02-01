@@ -123,13 +123,13 @@ impl World {
         &self.params
     }
 
-    pub fn update(&mut self, image: &mut Image) {
+    pub fn update(&mut self) {
         let Self {
             params,
             positions,
             velocities,
             partners,
-            colors,
+            colors: _,
         } = self;
         let Params {
             seed: _,
@@ -164,6 +164,16 @@ impl World {
         for idx in params.idxs() {
             positions[idx] += velocities[idx];
         }
+    }
+
+    pub fn render(&self, image: &mut Image) {
+        let Self {
+            params,
+            positions,
+            velocities: _,
+            partners: _,
+            colors,
+        } = self;
 
         let w = image.width();
         let h = image.height();
