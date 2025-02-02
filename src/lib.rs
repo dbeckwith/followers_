@@ -212,6 +212,9 @@ fn App() -> Element {
             return;
         };
         frame_limit.set(frame_limit_.max(1));
+        if let Some(world_renderer) = &mut *world_renderer.write() {
+            world_renderer.resume();
+        }
     });
 
     let on_click_pause_resume = use_callback(move |_: Event<MouseData>| {
