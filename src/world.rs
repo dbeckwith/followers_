@@ -344,6 +344,7 @@ impl Seed {
 
 fn hash_seed(seed: &str) -> u64 {
     seed.strip_prefix("0x")
+        .filter(|seed| seed.len() == 16)
         .and_then(|seed| u64::from_str_radix(seed, 16).ok())
         .unwrap_or_else(|| {
             let md5::Digest([b0, b1, b2, b3, b4, b5, b6, b7, ..]) =
