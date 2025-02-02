@@ -102,12 +102,8 @@ canvas.world {
   width: 4em;
 }
 
-.param.acc-limit .param-value {
-  width: 3em;
-}
-
 .param.acc-limit .param-control input {
-  width: 6em;
+  width: 3em;
 }
 
 .param.frame-limit .param-control input {

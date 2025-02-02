@@ -385,9 +385,6 @@ fn App() -> Element {
         acc_limit,
     } = &*params.read();
 
-    let acc_limit_display =
-        ((*acc_limit as f32).exp2() * 1000.0).round() / 1000.0;
-
     let world_renderer = world_renderer.read();
     let world_renderer = world_renderer.as_ref();
     let paused =
@@ -566,13 +563,10 @@ fn App() -> Element {
                     "acc limit: "
                 }
                 div {
-                    class: "param-value",
-                    "{acc_limit_display}"
-                }
-                div {
                     class: "param-control",
+                    "2^"
                     input {
-                        r#type: "range",
+                        r#type: "number",
                         min: MIN_ACC_LIMIT,
                         max: MAX_ACC_LIMIT,
                         value: *acc_limit,
