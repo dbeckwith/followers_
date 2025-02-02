@@ -71,7 +71,9 @@ canvas.world {
   gap: 4px;
 }
 
-.param.seed .param-value {
+.param.seed .param-control:nth-child(1) input {
+  width: 10em;
+
   font-family: 'Roboto Mono', monospace;
   font-size: 12px;
 }

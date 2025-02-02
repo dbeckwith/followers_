@@ -7,7 +7,7 @@ use anyhow::{ensure, Result};
 use log::info;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
-use std::f32::consts::PI;
+use std::{f32::consts::PI, fmt};
 
 // enough for a minute of 1000 particles
 const HISTORY_MEMORY_CAP: usize = 3600 * 1000 * size_of::<Vec2>();
@@ -21,9 +21,9 @@ pub struct World {
     history: Vec<Vec<Vec2>>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Params {
-    pub seed: u64,
+    pub seed: Seed,
     pub particle_count: usize,
     pub particle_color_hue_mid: f32,
     pub particle_color_hue_spread: f32,
@@ -31,7 +31,7 @@ pub struct Params {
     pub particle_color_saturation_spread: f32,
     pub particle_color_value: f32,
     pub particle_color_alpha: f32,
-    pub acc_limit: f32,
+    pub acc_limit: i32,
 }
 
 impl Params {
@@ -46,7 +46,7 @@ impl Params {
 }
 
 impl World {
-    pub fn new(params: Params) -> Result<Self> {
+    pub fn new(params: &Params) -> Result<Self> {
         params.check()?;
 
         let Params {
@@ -60,9 +60,12 @@ impl World {
             particle_color_alpha,
             acc_limit,
         } = params;
-        info!("world init - 0x{seed:016x}:{particle_count}:2^{acc_limit}");
+        info!(
+            "world init - {}:{particle_count}:2^{acc_limit}",
+            seed.fmt_hash()
+        );
 
-        let mut seeds = ChaCha20Rng::seed_from_u64(seed)
+        let mut seeds = ChaCha20Rng::seed_from_u64(seed.as_hash())
             .sample_iter(rand::distributions::Standard);
 
         macro_rules! with_rng {
@@ -125,8 +128,8 @@ impl World {
                             ..=particle_color_saturation_mid
                                 + particle_color_saturation_spread / 2.0,
                     ),
-                    particle_color_value,
-                    particle_color_alpha,
+                    *particle_color_value,
+                    *particle_color_alpha,
                 )
             })
             .collect::<Vec<_>>());
@@ -134,7 +137,7 @@ impl World {
         let history = vec![positions.clone()];
 
         Ok(Self {
-            params,
+            params: params.clone(),
             positions,
             velocities,
             partners,
@@ -164,7 +167,7 @@ impl World {
             acc_limit,
         } = *params;
 
-        let acc_limit = acc_limit.exp2();
+        let acc_limit = (acc_limit as f32).exp2();
 
         for idx in params.idxs() {
             let pos = positions[idx];
@@ -288,5 +291,76 @@ impl World {
         wln!(r#"</svg>"#);
 
         s
+    }
+}
+
+impl Params {
+    pub fn file_name(&self) -> String {
+        let Self {
+            seed,
+            particle_count,
+            particle_color_alpha: _,
+            particle_color_hue_mid: _,
+            particle_color_hue_spread: _,
+            particle_color_saturation_mid: _,
+            particle_color_saturation_spread: _,
+            particle_color_value: _,
+            acc_limit,
+        } = self;
+        let seed = seed.fmt_hash();
+        format!("{particle_count}-2_{acc_limit}-{seed}.svg")
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Seed {
+    s: String,
+    n: u64,
+}
+
+impl Seed {
+    pub fn from_str(seed: String) -> Self {
+        let n = hash_seed(&seed);
+        Self { s: seed, n }
+    }
+
+    pub fn from_hash(hash: u64) -> Self {
+        let s = unhash_seed(hash);
+        Self { s, n: hash }
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.s.as_str()
+    }
+
+    pub fn as_hash(&self) -> u64 {
+        self.n
+    }
+
+    pub fn fmt_hash(&self) -> SeedHash {
+        SeedHash(self.n)
+    }
+}
+
+fn hash_seed(seed: &str) -> u64 {
+    seed.strip_prefix("0x")
+        .and_then(|seed| u64::from_str_radix(seed, 16).ok())
+        .unwrap_or_else(|| {
+            let md5::Digest([b0, b1, b2, b3, b4, b5, b6, b7, ..]) =
+                md5::compute(seed);
+            u64::from_le_bytes([b0, b1, b2, b3, b4, b5, b6, b7])
+        })
+}
+
+fn unhash_seed(hash: u64) -> String {
+    SeedHash(hash).to_string()
+}
+
+pub struct SeedHash(u64);
+
+impl fmt::Display for SeedHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self(hash) = self;
+        write!(f, "0x{hash:016x}")
     }
 }
