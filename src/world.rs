@@ -36,7 +36,7 @@ pub struct Params {
 
 impl Params {
     fn check(&self) -> Result<()> {
-        ensure!(self.particle_count > 2);
+        ensure!(self.particle_count >= 3);
         Ok(())
     }
 
@@ -83,7 +83,7 @@ impl World {
                 let t = lerp(
                     idx as f32,
                     0.0,
-                    (particle_count - 1) as f32,
+                    *particle_count as f32,
                     0.0,
                     2.0 * PI,
                 );
