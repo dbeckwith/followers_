@@ -82,6 +82,10 @@ canvas.world {
   width: 6em;
 }
 
+.param.acc-limit .param-control input {
+  width: 3em;
+}
+
 .param.particle-color-hue-mid .param-control input {
   width: 4em;
 }
@@ -100,10 +104,6 @@ canvas.world {
 
 .param.particle-color-alpha .param-control input {
   width: 4em;
-}
-
-.param.acc-limit .param-control input {
-  width: 3em;
 }
 
 .param.frame-limit .param-control input {

@@ -11,7 +11,7 @@ use crate::{
     image::Image,
     math::lerp,
     renderer::WorldRenderer,
-    world::{Params, Seed, World},
+    world::{DisplayParams, Seed, SimParams, World},
 };
 use anyhow::Result;
 use dioxus::prelude::*;
@@ -67,19 +67,23 @@ const BACKGROUND_COLOR: Color = Color::hex(0x000000ff);
 #[component]
 fn App() -> Element {
     let mut seed_rng = use_signal(thread_rng);
-    let mut params = use_signal(|| Params {
+    let mut sim_params = use_signal(|| SimParams {
         seed: Seed::from_hash(0x27e3771584a46455),
         particle_count: 1000,
+        acc_limit: -1,
+    });
+    let mut display_params = use_signal(|| DisplayParams {
         particle_color_hue_mid: 120.0,
         particle_color_hue_spread: 240.0,
         particle_color_saturation_mid: 70.0,
         particle_color_saturation_spread: 20.0,
         particle_color_value: 100.0,
         particle_color_alpha: 6.0,
-        acc_limit: -1,
     });
     let mut frame_limit = use_signal(|| 60 * 60);
-    let mut world = use_signal(|| World::new(&params.peek()).unwrap());
+    let mut world = use_signal(|| {
+        World::new(&sim_params.peek(), &display_params.peek()).unwrap()
+    });
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
     let mut palette_image = use_signal(|| {
         Image::new(PALETTE_WIDTH, PALETTE_HEIGHT, Color::transparent())
@@ -95,12 +99,12 @@ fn App() -> Element {
 
     let on_input_seed = use_callback(move |event: Event<FormData>| {
         let seed = event.value();
-        params.write().seed = Seed::from_str(seed);
+        sim_params.write().seed = Seed::from_str(seed);
     });
 
     let on_click_rand_seed = use_callback(move |_: Event<MouseData>| {
         let seed = seed_rng.write().gen::<u64>();
-        params.write().seed = Seed::from_hash(seed);
+        sim_params.write().seed = Seed::from_hash(seed);
     });
 
     let on_input_particle_count =
@@ -111,9 +115,19 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-            params.write().particle_count =
+            sim_params.write().particle_count =
                 particle_count.clamp(MIN_PARTICLE_COUNT, MAX_PARTICLE_COUNT);
         });
+
+    let on_input_acc_limit = use_callback(move |event: Event<FormData>| {
+        let acc_limit = if let Ok(acc_limit) = event.parsed::<i32>() {
+            acc_limit
+        } else {
+            return;
+        };
+        sim_params.write().acc_limit =
+            acc_limit.clamp(MIN_ACC_LIMIT, MAX_ACC_LIMIT);
+    });
 
     let on_input_particle_color_hue_mid =
         use_callback(move |event: Event<FormData>| {
@@ -123,7 +137,7 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-            params.write().particle_color_hue_mid = particle_hue_mid
+            display_params.write().particle_color_hue_mid = particle_hue_mid
                 .clamp(MIN_PARTICLE_COLOR_HUE_MID, MAX_PARTICLE_COLOR_HUE_MID);
         });
 
@@ -135,8 +149,8 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-            params.write().particle_color_hue_spread = particle_hue_spread
-                .clamp(
+            display_params.write().particle_color_hue_spread =
+                particle_hue_spread.clamp(
                     MIN_PARTICLE_COLOR_HUE_SPREAD,
                     MAX_PARTICLE_COLOR_HUE_SPREAD,
                 );
@@ -150,7 +164,7 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-            params.write().particle_color_saturation_mid =
+            display_params.write().particle_color_saturation_mid =
                 particle_saturation_mid.clamp(
                     MIN_PARTICLE_COLOR_SATURATION_MID,
                     MAX_PARTICLE_COLOR_SATURATION_MID,
@@ -165,7 +179,7 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-            params.write().particle_color_saturation_spread =
+            display_params.write().particle_color_saturation_spread =
                 particle_saturation_spread.clamp(
                     MIN_PARTICLE_COLOR_SATURATION_SPREAD,
                     MAX_PARTICLE_COLOR_SATURATION_SPREAD,
@@ -180,7 +194,7 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-            params.write().particle_color_value = particle_value
+            display_params.write().particle_color_value = particle_value
                 .clamp(MIN_PARTICLE_COLOR_VALUE, MAX_PARTICLE_COLOR_VALUE);
         });
 
@@ -192,19 +206,9 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-            params.write().particle_color_alpha = particle_alpha
+            display_params.write().particle_color_alpha = particle_alpha
                 .clamp(MIN_PARTICLE_COLOR_ALPHA, MAX_PARTICLE_COLOR_ALPHA);
         });
-
-    let on_input_acc_limit = use_callback(move |event: Event<FormData>| {
-        let acc_limit = if let Ok(acc_limit) = event.parsed::<i32>() {
-            acc_limit
-        } else {
-            return;
-        };
-        params.write().acc_limit =
-            acc_limit.clamp(MIN_ACC_LIMIT, MAX_ACC_LIMIT);
-    });
 
     let on_input_frame_limit = use_callback(move |event: Event<FormData>| {
         let frame_limit_ = if let Ok(frame_limit) = event.parsed::<usize>() {
@@ -225,7 +229,7 @@ fn App() -> Element {
     });
 
     let on_click_reset = use_callback(move |_: Event<MouseData>| {
-        params.write();
+        sim_params.write();
     });
 
     let on_click_save = use_callback(move |_: Event<MouseData>| {
@@ -236,7 +240,7 @@ fn App() -> Element {
             } else {
                 return;
             };
-        let file_name = params.read().file_name();
+        let file_name = sim_params.read().file_name("png");
         let document = world_canvas_element.owner_document().unwrap();
         let closure = Closure::<dyn FnMut(Option<web_sys::Blob>)>::new(
             move |blob: Option<web_sys::Blob>| {
@@ -258,7 +262,7 @@ fn App() -> Element {
     });
 
     let on_click_save_svg = use_callback(move |_: Event<MouseData>| {
-        let file_name = params.read().file_name();
+        let file_name = sim_params.read().file_name("svg");
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
         defer(&window, move || {
@@ -273,12 +277,14 @@ fn App() -> Element {
     });
 
     use_effect(move || {
-        let new_world = if let Ok(world) = World::new(&params.read()) {
-            world
-        } else {
-            warn!("bad params: {:?}", params);
-            return;
-        };
+        let new_world =
+            match World::new(&sim_params.read(), &display_params.read()) {
+                Ok(world) => world,
+                Err(error) => {
+                    warn!("failed to create world: {:?}", error);
+                    return;
+                },
+            };
         world.set(new_world);
         if let Some(world_renderer) = &mut *world_renderer.write() {
             world_renderer.clear();
@@ -318,17 +324,14 @@ fn App() -> Element {
     });
 
     use_effect(move || {
-        let Params {
-            seed: _,
-            particle_count: _,
+        let DisplayParams {
             particle_color_hue_mid,
             particle_color_hue_spread,
             particle_color_saturation_mid,
             particle_color_saturation_spread,
             particle_color_value,
             particle_color_alpha: _,
-            acc_limit: _,
-        } = *params.read();
+        } = &*display_params.read();
         let palette_image = &mut *palette_image.write();
         for y in 0..PALETTE_HEIGHT {
             for x in 0..PALETTE_WIDTH {
@@ -351,7 +354,7 @@ fn App() -> Element {
                         particle_color_saturation_mid
                             + particle_color_saturation_spread / 2.0,
                     ),
-                    particle_color_value,
+                    *particle_color_value,
                     100.0,
                 );
                 palette_image.put_pixel(x, y, color);
@@ -376,17 +379,19 @@ fn App() -> Element {
     // re-render when world updates
     world.read();
 
-    let Params {
+    let SimParams {
         seed,
         particle_count,
+        acc_limit,
+    } = &*sim_params.read();
+    let DisplayParams {
         particle_color_hue_mid,
         particle_color_hue_spread,
         particle_color_saturation_mid,
         particle_color_saturation_spread,
         particle_color_value,
         particle_color_alpha,
-        acc_limit,
-    } = &*params.read();
+    } = &*display_params.read();
 
     let world_renderer = world_renderer.read();
     let world_renderer = world_renderer.as_ref();
@@ -439,6 +444,24 @@ fn App() -> Element {
                         max: MAX_PARTICLE_COUNT,
                         value: *particle_count,
                         oninput: on_input_particle_count,
+                    }
+                }
+            }
+            div {
+                class: "param acc-limit",
+                div {
+                    class: "param-label",
+                    "acc limit: "
+                }
+                div {
+                    class: "param-control",
+                    "2^"
+                    input {
+                        r#type: "number",
+                        min: MIN_ACC_LIMIT,
+                        max: MAX_ACC_LIMIT,
+                        value: *acc_limit,
+                        oninput: on_input_acc_limit,
                     }
                 }
             }
@@ -556,24 +579,6 @@ fn App() -> Element {
                         width: PALETTE_WIDTH,
                         height: PALETTE_HEIGHT,
                         onmounted: on_palette_canvas_mounted,
-                    }
-                }
-            }
-            div {
-                class: "param acc-limit",
-                div {
-                    class: "param-label",
-                    "acc limit: "
-                }
-                div {
-                    class: "param-control",
-                    "2^"
-                    input {
-                        r#type: "number",
-                        min: MIN_ACC_LIMIT,
-                        max: MAX_ACC_LIMIT,
-                        value: *acc_limit,
-                        oninput: on_input_acc_limit,
                     }
                 }
             }

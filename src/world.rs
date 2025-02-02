@@ -7,63 +7,63 @@ use anyhow::{ensure, Result};
 use log::info;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
-use std::{f32::consts::PI, fmt};
+use std::{f32::consts::PI, fmt, ops::Range};
 
 // enough for a minute of 1000 particles
 const HISTORY_MEMORY_CAP: usize = 3600 * 1000 * size_of::<Vec2>();
 
 pub struct World {
-    params: Params,
+    idxs: Range<usize>,
     positions: Vec<Vec2>,
     velocities: Vec<Vec2>,
     partners: Vec<[usize; 2]>,
     colors: Vec<Color>,
     history: Vec<Vec<Vec2>>,
+    acc_limit: i32,
 }
 
 #[derive(Debug, Clone)]
-pub struct Params {
+pub struct SimParams {
     pub seed: Seed,
     pub particle_count: usize,
+    pub acc_limit: i32,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisplayParams {
     pub particle_color_hue_mid: f32,
     pub particle_color_hue_spread: f32,
     pub particle_color_saturation_mid: f32,
     pub particle_color_saturation_spread: f32,
     pub particle_color_value: f32,
     pub particle_color_alpha: f32,
-    pub acc_limit: i32,
-}
-
-impl Params {
-    fn check(&self) -> Result<()> {
-        ensure!(self.particle_count >= 3);
-        Ok(())
-    }
-
-    fn idxs(&self) -> std::ops::Range<usize> {
-        0..self.particle_count
-    }
 }
 
 impl World {
-    pub fn new(params: &Params) -> Result<Self> {
-        params.check()?;
-
-        let Params {
+    pub fn new(
+        sim_params: &SimParams,
+        display_params: &DisplayParams,
+    ) -> Result<Self> {
+        let SimParams {
             seed,
             particle_count,
+            acc_limit,
+        } = sim_params;
+        let DisplayParams {
             particle_color_hue_mid,
             particle_color_hue_spread,
             particle_color_saturation_mid,
             particle_color_saturation_spread,
             particle_color_value,
             particle_color_alpha,
-            acc_limit,
-        } = params;
+        } = display_params;
+        ensure!(*particle_count >= 3);
         info!(
             "world init - {}:{particle_count}:2^{acc_limit}",
             seed.fmt_hash()
         );
+
+        let idxs = 0..*particle_count;
 
         let mut seeds = ChaCha20Rng::seed_from_u64(seed.as_hash())
             .sample_iter(rand::distributions::Standard);
@@ -77,8 +77,8 @@ impl World {
             }};
         }
 
-        let positions = with_rng!(|rng| params
-            .idxs()
+        let positions = with_rng!(|rng| idxs
+            .clone()
             .map(|idx| {
                 let t = lerp(
                     idx as f32,
@@ -92,29 +92,29 @@ impl World {
             })
             .collect::<Vec<_>>());
 
-        let velocities = with_rng!(|rng| params
-            .idxs()
+        let velocities = with_rng!(|rng| idxs
+            .clone()
             .map(|_idx| Vec2::new(0.0, 0.0))
             .collect::<Vec<_>>());
 
-        let partners = with_rng!(|rng| params
-            .idxs()
+        let partners = with_rng!(|rng| idxs
+            .clone()
             .map(|idx| {
                 let i = idx;
-                let mut j = rng.gen_range(params.idxs());
+                let mut j = rng.gen_range(idxs.clone());
                 while j == i {
-                    j = rng.gen_range(params.idxs());
+                    j = rng.gen_range(idxs.clone());
                 }
-                let mut k = rng.gen_range(params.idxs());
+                let mut k = rng.gen_range(idxs.clone());
                 while k == i || k == j {
-                    k = rng.gen_range(params.idxs());
+                    k = rng.gen_range(idxs.clone());
                 }
                 [j, k]
             })
             .collect::<Vec<_>>());
 
-        let colors = with_rng!(|rng| params
-            .idxs()
+        let colors = with_rng!(|rng| idxs
+            .clone()
             .map(|_idx| {
                 Color::hsva(
                     rng.gen_range(
@@ -137,39 +137,30 @@ impl World {
         let history = vec![positions.clone()];
 
         Ok(Self {
-            params: params.clone(),
+            idxs,
             positions,
             velocities,
             partners,
             colors,
             history,
+            acc_limit: *acc_limit,
         })
     }
 
     pub fn update(&mut self) {
         let Self {
-            params,
+            idxs,
             positions,
             velocities,
             partners,
             colors: _,
             history,
-        } = self;
-        let Params {
-            seed: _,
-            particle_count,
-            particle_color_hue_mid: _,
-            particle_color_hue_spread: _,
-            particle_color_saturation_mid: _,
-            particle_color_saturation_spread: _,
-            particle_color_value: _,
-            particle_color_alpha: _,
             acc_limit,
-        } = *params;
+        } = self;
 
-        let acc_limit = (acc_limit as f32).exp2();
+        let acc_limit = (*acc_limit as f32).exp2();
 
-        for idx in params.idxs() {
+        for idx in idxs.clone() {
             let pos = positions[idx];
             let [p1, p2] = partners[idx];
             let p1 = positions[p1];
@@ -190,11 +181,11 @@ impl World {
             *vel = vel.clamp_length_max(1.0);
         }
 
-        for idx in params.idxs() {
+        for idx in idxs.clone() {
             positions[idx] += velocities[idx];
         }
 
-        if (history.len() + 1) * particle_count * size_of::<Vec2>()
+        if (history.len() + 1) * idxs.len() * size_of::<Vec2>()
             > HISTORY_MEMORY_CAP
         {
             // pop oldest
@@ -208,17 +199,18 @@ impl World {
 
     pub fn render(&self, image: &mut Image) {
         let Self {
-            params,
+            idxs,
             positions,
             velocities: _,
             partners: _,
             colors,
             history: _,
+            acc_limit: _,
         } = self;
 
         let hw = (image.width() as f32) / 2.0;
         let hh = (image.height() as f32) / 2.0;
-        for idx in params.idxs() {
+        for idx in idxs.clone() {
             let pos = positions[idx];
             let x = pos.x + hw;
             let y = pos.y + hh;
@@ -231,12 +223,13 @@ impl World {
         use std::fmt::Write;
 
         let Self {
-            params,
+            idxs,
             positions: _,
             velocities: _,
             partners: _,
             colors,
             history,
+            acc_limit: _,
         } = self;
 
         let mut s = String::new();
@@ -272,7 +265,7 @@ impl World {
         w!(r#" viewBox="{x} {y} {w} {h}""#);
         w!(r#" style="background: #{bg};""#);
         wln!(r#">"#);
-        for idx in params.idxs() {
+        for idx in idxs.clone() {
             let color = colors[idx].fmt_hex();
             w!(r#"  <path"#);
             w!(r#" fill="none""#);
@@ -294,21 +287,15 @@ impl World {
     }
 }
 
-impl Params {
-    pub fn file_name(&self) -> String {
+impl SimParams {
+    pub fn file_name(&self, ext: &str) -> String {
         let Self {
             seed,
             particle_count,
-            particle_color_alpha: _,
-            particle_color_hue_mid: _,
-            particle_color_hue_spread: _,
-            particle_color_saturation_mid: _,
-            particle_color_saturation_spread: _,
-            particle_color_value: _,
             acc_limit,
         } = self;
         let seed = seed.fmt_hash();
-        format!("{particle_count}-2_{acc_limit}-{seed}.svg")
+        format!("{particle_count}-2_{acc_limit}-{seed}.{ext}")
     }
 }
 
