@@ -62,6 +62,8 @@ const MAX_ACC_LIMIT: i32 = 10;
 const PALETTE_WIDTH: usize = 100;
 const PALETTE_HEIGHT: usize = 40;
 
+const BACKGROUND_COLOR: Color = Color::hex(0x000000ff);
+
 #[component]
 fn App() -> Element {
     let mut seed_rng = use_signal(thread_rng);
@@ -76,7 +78,6 @@ fn App() -> Element {
         particle_color_alpha: 6.0,
         acc_limit: -1,
     });
-    let background_color = use_signal(|| Color::hex(0x000000ff));
     let mut frame_limit = use_signal(|| 60 * 60);
     let mut world = use_signal(|| World::new(&params.peek()).unwrap());
     let mut world_renderer = use_signal(|| None::<WorldRenderer>);
@@ -258,11 +259,10 @@ fn App() -> Element {
 
     let on_click_save_svg = use_callback(move |_: Event<MouseData>| {
         let file_name = params.read().file_name();
-        let background_color = *background_color.read();
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
         defer(&window, move || {
-            let svg = world.peek().generate_svg(background_color);
+            let svg = world.peek().generate_svg(BACKGROUND_COLOR);
             // TODO: handle errors?
             let blob = web_sys::Blob::new_with_str_sequence(&vec![svg].into())
                 .unwrap();
@@ -310,7 +310,7 @@ fn App() -> Element {
                 *renderer = Some(WorldRenderer::new(
                     world_canvas_element,
                     world,
-                    background_color,
+                    BACKGROUND_COLOR,
                     frame_limit,
                 ));
             }

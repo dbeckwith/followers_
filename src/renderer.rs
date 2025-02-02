@@ -23,7 +23,7 @@ impl WorldRenderer {
     pub fn new(
         canvas: &web_sys::HtmlCanvasElement,
         mut world: Signal<World>,
-        background: Signal<Color>,
+        background: Color,
         frame_limit: Signal<usize>,
     ) -> WorldRenderer {
         let context = canvas
@@ -35,7 +35,7 @@ impl WorldRenderer {
 
         let width = canvas.width() as usize;
         let height = canvas.height() as usize;
-        let mut image = Image::new(width, height, *background.peek());
+        let mut image = Image::new(width, height, background);
         world.peek().render(&mut image);
 
         let image_data = image.to_image_data();
