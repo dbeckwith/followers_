@@ -249,10 +249,7 @@ fn App() -> Element {
                 } else {
                     return;
                 };
-                let url =
-                    web_sys::Url::create_object_url_with_blob(&blob).unwrap();
-                download_url(&document, &url, &file_name);
-                web_sys::Url::revoke_object_url(&url).unwrap();
+                download_blob(&document, &blob, &file_name);
             },
         );
         world_canvas_element
@@ -270,9 +267,7 @@ fn App() -> Element {
             // TODO: handle errors?
             let blob = web_sys::Blob::new_with_str_sequence(&vec![svg].into())
                 .unwrap();
-            let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
-            download_url(&document, &url, &file_name);
-            web_sys::Url::revoke_object_url(&url).unwrap();
+            download_blob(&document, &blob, &file_name);
         });
     });
 
@@ -639,6 +634,16 @@ fn App() -> Element {
             }
         }
     }
+}
+
+fn download_blob(
+    document: &web_sys::Document,
+    blob: &web_sys::Blob,
+    file_name: &str,
+) {
+    let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+    download_url(document, &url, file_name);
+    web_sys::Url::revoke_object_url(&url).unwrap();
 }
 
 fn download_url(document: &web_sys::Document, url: &str, file_name: &str) {
