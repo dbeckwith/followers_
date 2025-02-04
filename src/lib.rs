@@ -23,6 +23,8 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
 fn start() -> Result<(), JsValue> {
+    dioxus::logger::init(dioxus::logger::tracing::Level::DEBUG)
+        .expect("logger failed to init");
     info!("wasm start");
 
     let window = web_sys::window()
@@ -34,10 +36,9 @@ fn start() -> Result<(), JsValue> {
         .body()
         .ok_or_else(|| JsError::new("failed to get body of document"))?;
 
-    dioxus::web::launch::launch_cfg(
-        App,
-        dioxus::web::Config::new().rootelement(body.into()),
-    );
+    dioxus::LaunchBuilder::web()
+        .with_cfg(dioxus::web::Config::new().rootelement(body.into()))
+        .launch(App);
 
     Ok(())
 }
