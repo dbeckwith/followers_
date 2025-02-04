@@ -4,7 +4,7 @@ use crate::{
     math::{lerp, Vec2},
 };
 use anyhow::{ensure, Result};
-use log::info;
+use dioxus::logger::tracing::info;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use std::{f32::consts::PI, fmt, ops::Range};

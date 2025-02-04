@@ -1,6 +1,5 @@
 use crate::{color::Color, image::Image, world::World};
-use dioxus::prelude::*;
-use log::debug;
+use dioxus::{logger::tracing::debug, prelude::*};
 use std::{
     cell::RefCell,
     rc::Rc,

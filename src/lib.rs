@@ -14,15 +14,15 @@ use crate::{
     world::{DisplayParams, Seed, SimParams, World},
 };
 use anyhow::Result;
-use dioxus::prelude::*;
-use log::{info, warn};
+use dioxus::{
+    logger::tracing::{info, warn},
+    prelude::*,
+};
 use rand::prelude::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
 fn start() -> Result<(), JsValue> {
-    console_error_panic_hook::set_once();
-    wasm_logger::init(wasm_logger::Config::default());
     info!("wasm start");
 
     let window = web_sys::window()
@@ -641,7 +641,7 @@ fn download_blob(
     blob: &web_sys::Blob,
     file_name: &str,
 ) {
-    let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+    let url = web_sys::Url::create_object_url_with_blob(blob).unwrap();
     download_url(document, &url, file_name);
     web_sys::Url::revoke_object_url(&url).unwrap();
 }

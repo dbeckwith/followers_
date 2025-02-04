@@ -7,7 +7,6 @@ anyhow = "1.0.95"
 console_error_panic_hook = "0.1.7"
 dioxus = { version = "=0.6.0", default-features = false }
 getrandom = "*" # dependency of rand
-log = "0.4.22"
 md5 = "0.7.0"
 rand = "0.8"
 rand_chacha = "0.3"
@@ -33,7 +32,6 @@ anyhow = { workspace = true }
 console_error_panic_hook = { workspace = true }
 getrandom = { workspace = true, features = ["js"] }
 js-sys = { workspace = true }
-log = { workspace = true }
 md5 = { workspace = true }
 rand = { workspace = true }
 rand_chacha = { workspace = true }
@@ -46,16 +44,9 @@ zerocopy = { workspace = true, features = ["derive"] }
 [dependencies.dioxus]
 workspace = true
 features = [
-    "asset",
-    "document",
-    "file_engine",
-    "hooks",
-    "html",
-    "launch",
     "logger",
-    "macro",
+    "minimal",
     "mounted",
-    "signals",
     "web",
 ]
 

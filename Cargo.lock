@@ -108,27 +108,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "const-serialize"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08259976d62c715c4826cb4a3d64a3a9e5c5f68f964ff6087319857f569f93a6"
-dependencies = [
- "const-serialize-macro",
- "serde",
-]
-
-[[package]]
-name = "const-serialize-macro"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04382d0d9df7434af6b1b49ea1a026ef39df1b0738b1cc373368cf175354f6eb"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "const_format"
 version = "0.2.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -255,15 +234,12 @@ dependencies = [
  "dioxus-config-macro",
  "dioxus-core",
  "dioxus-core-macro",
- "dioxus-document",
  "dioxus-fullstack",
- "dioxus-history",
  "dioxus-hooks",
  "dioxus-html",
  "dioxus-logger",
  "dioxus-signals",
  "dioxus-web",
- "manganis",
 ]
 
 [[package]]
@@ -634,7 +610,6 @@ dependencies = [
  "dioxus",
  "getrandom",
  "js-sys",
- "log",
  "md5",
  "rand",
  "rand_chacha",
@@ -1058,41 +1033,6 @@ name = "longest-increasing-subsequence"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3bd0dd2cd90571056fdb71f6275fada10131182f84899f4b2a916e565d81d86"
-
-[[package]]
-name = "manganis"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "287c60ae66fb8a089e4c2c256079dd76e4f9cb147d352b3278ca352e8ed0bf02"
-dependencies = [
- "const-serialize",
- "manganis-core",
- "manganis-macro",
-]
-
-[[package]]
-name = "manganis-core"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7b349d520edba475a760112e6105c55125d8ab1e94147b219fb2f2e3303fad9"
-dependencies = [
- "const-serialize",
- "dioxus-cli-config",
- "dioxus-core-types",
- "serde",
-]
-
-[[package]]
-name = "manganis-macro"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7024fc969bf2f2fd874bcd0a5d6ae8f85a2853ba86773a024a744b32f716426"
-dependencies = [
- "manganis-core",
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "md5"
