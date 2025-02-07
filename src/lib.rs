@@ -14,11 +14,13 @@ use crate::{
     world::{DisplayParams, Seed, SimParams, World},
 };
 use anyhow::Result;
+use base64::prelude::*;
 use dioxus::{
-    logger::tracing::{info, warn},
+    logger::tracing::{debug, info, warn},
     prelude::*,
 };
 use rand::prelude::*;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
@@ -64,6 +66,14 @@ const PALETTE_WIDTH: usize = 100;
 const PALETTE_HEIGHT: usize = 40;
 
 const BACKGROUND_COLOR: Color = Color::hex(0x000000ff);
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Config {
+    version: u64,
+    sim_params: SimParams,
+    display_params: DisplayParams,
+    frame_limit: usize,
+}
 
 #[component]
 fn App() -> Element {
@@ -372,6 +382,87 @@ fn App() -> Element {
         }
     });
 
+    // read config from URL
+    use_effect(move || {
+        let mut read_config = move || {
+            let window = web_sys::window().unwrap();
+            let url =
+                web_sys::Url::new(&window.location().href().unwrap()).unwrap();
+            let config = if let Some(config) =
+                decode_config_str(url.search().trim_start_matches('?'))
+            {
+                config
+            } else {
+                return;
+            };
+            debug!("config from URL: {:#?}", config);
+            let Config {
+                version,
+                sim_params: sim_params_,
+                display_params: display_params_,
+                frame_limit: frame_limit_,
+            } = config;
+            if version != 1 {
+                return;
+            }
+            sim_params.set(sim_params_);
+            display_params.set(display_params_);
+            frame_limit.set(frame_limit_);
+        };
+        read_config();
+        let window = web_sys::window().unwrap();
+        let on_pop_state =
+            Closure::<dyn FnMut(web_sys::PopStateEvent)>::new(move |_event| {
+                read_config();
+            });
+        window
+            .add_event_listener_with_callback(
+                "popstate",
+                on_pop_state.as_ref().unchecked_ref(),
+            )
+            .unwrap();
+        on_pop_state.forget(); // FIXME: don't leak
+    });
+
+    // write config to URL
+    let mut history_push_state_timeout_handle = use_signal(|| None::<i32>);
+    use_effect(move || {
+        let window = web_sys::window().unwrap();
+        let url =
+            web_sys::Url::new(&window.location().href().unwrap()).unwrap();
+        let config_str = encode_config_str(Config {
+            version: 1,
+            sim_params: sim_params.read().clone(),
+            display_params: display_params.read().clone(),
+            frame_limit: *frame_limit.read(),
+        });
+        let search = config_str.as_deref().unwrap_or("");
+        if url.search().trim_start_matches('?') == search {
+            return;
+        }
+        url.set_search(search);
+        let url = url.href();
+        let history = window.history().unwrap();
+        if let Some(history_push_state_timeout_handle) =
+            *history_push_state_timeout_handle.peek()
+        {
+            window.clear_timeout_with_handle(history_push_state_timeout_handle);
+        }
+        let callback = Closure::<dyn FnOnce()>::once_into_js(move || {
+            history
+                .push_state_with_url(&js_sys::Object::new(), "", Some(&url))
+                .unwrap();
+        });
+        history_push_state_timeout_handle.set(Some(
+            window
+                .set_timeout_with_callback_and_timeout_and_arguments_0(
+                    callback.unchecked_ref(),
+                    1000,
+                )
+                .unwrap(),
+        ));
+    });
+
     // re-render when world updates
     world.read();
 
@@ -635,6 +726,24 @@ fn App() -> Element {
             }
         }
     }
+}
+
+fn encode_config_str(config: Config) -> Option<String> {
+    let json = serde_json::to_string(&config).ok()?;
+    let deflated_json = deflate::deflate_bytes_conf(
+        json.as_bytes(),
+        deflate::CompressionOptions::high(),
+    );
+    let base64 = BASE64_URL_SAFE.encode(deflated_json.as_slice());
+    Some(base64)
+}
+
+fn decode_config_str(s: &str) -> Option<Config> {
+    let base64 = s;
+    let deflated_json = BASE64_URL_SAFE.decode(base64).ok()?;
+    let json = inflate::inflate_bytes(deflated_json.as_slice()).ok()?;
+    let config = serde_json::from_slice(json.as_slice()).ok()?;
+    Some(config)
 }
 
 fn download_blob(

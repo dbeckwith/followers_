@@ -7,6 +7,7 @@ use anyhow::{ensure, Result};
 use dioxus::logger::tracing::info;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
+use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, fmt, ops::Range};
 
 // enough for a minute of 1000 particles
@@ -22,14 +23,14 @@ pub struct World {
     acc_limit: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimParams {
     pub seed: Seed,
     pub particle_count: usize,
     pub acc_limit: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisplayParams {
     pub particle_color_hue_mid: f32,
     pub particle_color_hue_spread: f32,
@@ -299,7 +300,7 @@ impl SimParams {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Seed {
     s: String,
     n: u64,
