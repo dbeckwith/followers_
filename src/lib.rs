@@ -67,6 +67,8 @@ const PALETTE_HEIGHT: usize = 40;
 
 const BACKGROUND_COLOR: Color = Color::hex(0x000000ff);
 
+const CONFIG_COMMIT_DELAY_MS: u32 = 400;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     version: u64,
@@ -457,7 +459,7 @@ fn App() -> Element {
             window
                 .set_timeout_with_callback_and_timeout_and_arguments_0(
                     callback.unchecked_ref(),
-                    1000,
+                    CONFIG_COMMIT_DELAY_MS as i32,
                 )
                 .unwrap(),
         ));
