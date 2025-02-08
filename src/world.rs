@@ -289,14 +289,14 @@ impl World {
 }
 
 impl SimParams {
-    pub fn file_name(&self, ext: &str) -> String {
+    pub fn file_name(&self) -> String {
         let Self {
             seed,
             particle_count,
             acc_limit,
         } = self;
         let seed = seed.fmt_hash();
-        format!("{particle_count}-2_{acc_limit}-{seed}.{ext}")
+        format!("{particle_count}-2_{acc_limit}-{seed}")
     }
 }
 

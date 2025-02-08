@@ -103,6 +103,19 @@ fn App() -> Element {
         Image::new(PALETTE_WIDTH, PALETTE_HEIGHT, Color::transparent())
     });
 
+    let config_str = use_memo(move || {
+        encode_config_str(Config {
+            version: 1,
+            sim_params: sim_params.read().clone(),
+            display_params: display_params.read().clone(),
+            frame_limit: *frame_limit.read(),
+        })
+    });
+
+    let file_name = use_memo(move || {
+        format!("{}-{}", sim_params.read().file_name(), &*config_str.read())
+    });
+
     let (world_canvas_element, on_world_canvas_mounted) =
         use_element::<web_sys::HtmlCanvasElement>();
     let world_canvas_size =
@@ -254,7 +267,7 @@ fn App() -> Element {
             } else {
                 return;
             };
-        let file_name = sim_params.read().file_name("png");
+        let file_name = format!("{}.png", &*file_name.read());
         let document = world_canvas_element.owner_document().unwrap();
         let closure = Closure::<dyn FnMut(Option<web_sys::Blob>)>::new(
             move |blob: Option<web_sys::Blob>| {
@@ -273,7 +286,7 @@ fn App() -> Element {
     });
 
     let on_click_save_svg = use_callback(move |_: Event<MouseData>| {
-        let file_name = sim_params.read().file_name("svg");
+        let file_name = format!("{}.svg", &*file_name.read());
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
         defer(&window, move || {
@@ -436,13 +449,7 @@ fn App() -> Element {
         let window = web_sys::window().unwrap();
         let url =
             web_sys::Url::new(&window.location().href().unwrap()).unwrap();
-        let config_str = encode_config_str(Config {
-            version: 1,
-            sim_params: sim_params.read().clone(),
-            display_params: display_params.read().clone(),
-            frame_limit: *frame_limit.read(),
-        });
-        let config_str = config_str.as_deref().unwrap_or("");
+        let config_str = &*config_str.read();
         if url.search_params().get(CONFIG_QUERY_PARAM).as_deref()
             == Some(config_str)
         {
@@ -736,15 +743,15 @@ fn App() -> Element {
     }
 }
 
-fn encode_config_str(config: Config) -> Option<String> {
-    let message_pack = rmp_serde::to_vec(&config).ok()?;
+fn encode_config_str(config: Config) -> String {
+    let message_pack = rmp_serde::to_vec(&config).unwrap();
     let deflated_message_pack = deflate::deflate_bytes_conf(
         message_pack.as_slice(),
         deflate::CompressionOptions::high(),
     );
     let base64 =
         BASE64_URL_SAFE_NO_PAD.encode(deflated_message_pack.as_slice());
-    Some(base64)
+    base64
 }
 
 fn decode_config_str(s: &str) -> Option<Config> {
