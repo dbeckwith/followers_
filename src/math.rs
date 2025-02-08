@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Mul, Sub};
+use std::ops::{Add, AddAssign, Mul, RangeInclusive, Sub};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Vec2 {
@@ -84,4 +84,8 @@ pub fn lerp(
     new_max: f32,
 ) -> f32 {
     (x - old_min) / (old_max - old_min) * (new_max - new_min) + new_min
+}
+
+pub fn spread_range(mid: f32, spread: f32) -> RangeInclusive<f32> {
+    mid - spread / 2.0..=mid + spread / 2.0
 }

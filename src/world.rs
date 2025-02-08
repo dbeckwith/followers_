@@ -1,7 +1,7 @@
 use crate::{
     color::Color,
     image::Image,
-    math::{lerp, Vec2},
+    math::{lerp, spread_range, Vec2},
 };
 use anyhow::{ensure, Result};
 use dioxus::logger::tracing::info;
@@ -118,17 +118,14 @@ impl World {
             .clone()
             .map(|_idx| {
                 Color::hsva(
-                    rng.gen_range(
-                        particle_color_hue_mid - particle_color_hue_spread / 2.0
-                            ..=particle_color_hue_mid
-                                + particle_color_hue_spread / 2.0,
-                    ),
-                    rng.gen_range(
-                        particle_color_saturation_mid
-                            - particle_color_saturation_spread / 2.0
-                            ..=particle_color_saturation_mid
-                                + particle_color_saturation_spread / 2.0,
-                    ),
+                    rng.gen_range(spread_range(
+                        *particle_color_hue_mid,
+                        *particle_color_hue_spread,
+                    )),
+                    rng.gen_range(spread_range(
+                        *particle_color_saturation_mid,
+                        *particle_color_saturation_spread,
+                    )),
                     *particle_color_value,
                     *particle_color_alpha,
                 )
