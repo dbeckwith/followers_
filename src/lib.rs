@@ -68,6 +68,7 @@ const PALETTE_HEIGHT: usize = 40;
 const BACKGROUND_COLOR: Color = Color::hex(0x000000ff);
 
 const CONFIG_COMMIT_DELAY_MS: u32 = 400;
+const CONFIG_QUERY_PARAM: &str = "c";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
@@ -390,8 +391,11 @@ fn App() -> Element {
             let window = web_sys::window().unwrap();
             let url =
                 web_sys::Url::new(&window.location().href().unwrap()).unwrap();
-            let config = if let Some(config) =
-                decode_config_str(url.search().trim_start_matches('?'))
+            let config = if let Some(config) = url
+                .search_params()
+                .get(CONFIG_QUERY_PARAM)
+                .as_deref()
+                .and_then(decode_config_str)
             {
                 config
             } else {
@@ -438,11 +442,13 @@ fn App() -> Element {
             display_params: display_params.read().clone(),
             frame_limit: *frame_limit.read(),
         });
-        let search = config_str.as_deref().unwrap_or("");
-        if url.search().trim_start_matches('?') == search {
+        let config_str = config_str.as_deref().unwrap_or("");
+        if url.search_params().get(CONFIG_QUERY_PARAM).as_deref()
+            == Some(config_str)
+        {
             return;
         }
-        url.set_search(search);
+        url.search_params().set(CONFIG_QUERY_PARAM, config_str);
         let url = url.href();
         let history = window.history().unwrap();
         if let Some(history_push_state_timeout_handle) =
@@ -736,13 +742,14 @@ fn encode_config_str(config: Config) -> Option<String> {
         message_pack.as_slice(),
         deflate::CompressionOptions::high(),
     );
-    let base64 = BASE64_URL_SAFE.encode(deflated_message_pack.as_slice());
+    let base64 =
+        BASE64_URL_SAFE_NO_PAD.encode(deflated_message_pack.as_slice());
     Some(base64)
 }
 
 fn decode_config_str(s: &str) -> Option<Config> {
     let base64 = s;
-    let deflated_message_pack = BASE64_URL_SAFE.decode(base64).ok()?;
+    let deflated_message_pack = BASE64_URL_SAFE_NO_PAD.decode(base64).ok()?;
     let message_pack =
         inflate::inflate_bytes(deflated_message_pack.as_slice()).ok()?;
     let config = rmp_serde::from_slice(message_pack.as_slice()).ok()?;

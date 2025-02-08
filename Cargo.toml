@@ -73,6 +73,7 @@ features = [
     "PopStateEvent",
     "ResizeObserver",
     "Url",
+    "UrlSearchParams",
     "Window",
 ]
 
