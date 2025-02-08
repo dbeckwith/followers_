@@ -729,20 +729,21 @@ fn App() -> Element {
 }
 
 fn encode_config_str(config: Config) -> Option<String> {
-    let json = serde_json::to_string(&config).ok()?;
-    let deflated_json = deflate::deflate_bytes_conf(
-        json.as_bytes(),
+    let message_pack = rmp_serde::to_vec(&config).ok()?;
+    let deflated_message_pack = deflate::deflate_bytes_conf(
+        message_pack.as_slice(),
         deflate::CompressionOptions::high(),
     );
-    let base64 = BASE64_URL_SAFE.encode(deflated_json.as_slice());
+    let base64 = BASE64_URL_SAFE.encode(deflated_message_pack.as_slice());
     Some(base64)
 }
 
 fn decode_config_str(s: &str) -> Option<Config> {
     let base64 = s;
-    let deflated_json = BASE64_URL_SAFE.decode(base64).ok()?;
-    let json = inflate::inflate_bytes(deflated_json.as_slice()).ok()?;
-    let config = serde_json::from_slice(json.as_slice()).ok()?;
+    let deflated_message_pack = BASE64_URL_SAFE.decode(base64).ok()?;
+    let message_pack =
+        inflate::inflate_bytes(deflated_message_pack.as_slice()).ok()?;
+    let config = rmp_serde::from_slice(message_pack.as_slice()).ok()?;
     Some(config)
 }
 
