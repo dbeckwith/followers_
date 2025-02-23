@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::*;
 pub struct WorldRenderer {
     world: Signal<World>,
     image: Rc<RefCell<Image>>,
-    context: Rc<RefCell<web_sys::CanvasRenderingContext2d>>,
+    context: web_sys::CanvasRenderingContext2d,
     paused: Rc<AtomicBool>,
     frame_idx: Rc<AtomicUsize>,
     window: web_sys::Window,
@@ -41,7 +41,6 @@ impl WorldRenderer {
         context.put_image_data(&image_data, 0.0, 0.0).unwrap();
 
         let image = Rc::new(RefCell::new(image));
-        let context = Rc::new(RefCell::new(context));
         let paused = Rc::new(AtomicBool::new(false));
         let frame_idx = Rc::new(AtomicUsize::new(0));
 
@@ -51,7 +50,7 @@ impl WorldRenderer {
             Rc::new(RefCell::new(None::<Closure<dyn FnMut()>>));
         let closure = Closure::new({
             let image = Rc::clone(&image);
-            let context = Rc::clone(&context);
+            let context = context.clone();
             let paused = Rc::clone(&paused);
             let frame_idx = Rc::clone(&frame_idx);
             let window = window.clone();
@@ -74,7 +73,6 @@ impl WorldRenderer {
                 let mut world = world.write();
                 world.update();
                 let image = &mut *image.borrow_mut();
-                let context = &mut *context.borrow_mut();
                 world.render(image);
                 let image_data = image.to_image_data();
                 context.put_image_data(&image_data, 0.0, 0.0).unwrap();
@@ -159,12 +157,11 @@ impl WorldRenderer {
         let image_data = image.to_image_data();
         context.put_image_data(&image_data, 0.0, 0.0).unwrap();
 
-        *self.context.borrow_mut() = context;
+        self.context = context;
     }
 
     pub fn clear(&mut self) {
         let image = &mut *self.image.borrow_mut();
-        let context = &*self.context.borrow_mut();
 
         self.frame_idx.store(0, atomic::Ordering::SeqCst);
 
@@ -172,6 +169,6 @@ impl WorldRenderer {
         self.world.peek().render(image);
 
         let image_data = image.to_image_data();
-        context.put_image_data(&image_data, 0.0, 0.0).unwrap();
+        self.context.put_image_data(&image_data, 0.0, 0.0).unwrap();
     }
 }
