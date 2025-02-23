@@ -805,6 +805,10 @@ fn App() -> Element {
         if *show_help.read() {
             div {
                 class: "help",
+                button {
+                    onclick: on_click_help,
+                    "close"
+                }
                 h1 { "Followers" }
                 for line in HELP {
                     p { {line} }

@@ -129,7 +129,12 @@ canvas.world {
   background-color: #0008;
 }
 
-h1 {
+.help button {
+  position: absolute;
+  right: 8px;
+}
+
+.help h1 {
   font-size: 16px;
   margin-block-start: 0;
 }
