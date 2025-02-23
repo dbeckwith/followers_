@@ -8,7 +8,7 @@ use dioxus::logger::tracing::info;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
-use std::{f32::consts::PI, fmt, ops::Range};
+use std::{collections::VecDeque, f32::consts::PI, fmt, ops::Range};
 
 // enough for a minute of 1000 particles
 const HISTORY_MEMORY_CAP: usize = 3600 * 1000 * size_of::<Vec2>();
@@ -19,7 +19,7 @@ pub struct World {
     velocities: Vec<Vec2>,
     partners: Vec<[usize; 2]>,
     colors: Vec<Color>,
-    history: Vec<Vec<Vec2>>,
+    history: VecDeque<Vec<Vec2>>,
     acc_limit: i32,
 }
 
@@ -132,7 +132,8 @@ impl World {
             })
             .collect::<Vec<_>>());
 
-        let history = vec![positions.clone()];
+        let mut history = VecDeque::new();
+        history.push_back(positions.clone());
 
         Ok(Self {
             idxs,
@@ -187,12 +188,9 @@ impl World {
             > HISTORY_MEMORY_CAP
         {
             // pop oldest
-            // SAFETY: history is never empty since it starts off containing the
-            // initial positions
-            history.swap_remove(0);
-            history.rotate_left(1);
+            history.pop_front();
         }
-        history.push(positions.clone());
+        history.push_back(positions.clone());
     }
 
     pub fn render(&self, image: &mut Image) {
