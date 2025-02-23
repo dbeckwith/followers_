@@ -70,6 +70,7 @@ features = [
     "HtmlElement",
     "ImageData",
     "Location",
+    "Performance",
     "PopStateEvent",
     "ResizeObserver",
     "Url",

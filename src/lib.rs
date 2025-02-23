@@ -21,6 +21,7 @@ use dioxus::{
 };
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
@@ -506,6 +507,23 @@ fn App() -> Element {
         .map(|world_renderer| world_renderer.frame_idx())
         .unwrap_or(0);
 
+    let fps = {
+        let now = web_sys::window().unwrap().performance().unwrap().now();
+        let mut frame_times = use_signal(VecDeque::<f64>::new);
+        let mut frame_times = frame_times.write();
+        loop {
+            if let Some(head) = frame_times.front() {
+                if now - head >= 1000.0 {
+                    frame_times.pop_front();
+                    continue;
+                }
+            }
+            break;
+        }
+        frame_times.push_back(now);
+        frame_times.len() as f64
+    };
+
     rsx! {
         canvas {
             class: "world",
@@ -712,6 +730,17 @@ fn App() -> Element {
                 div {
                     class: "param-value",
                     "{frame_idx}"
+                }
+            }
+            div {
+                class: "param fps",
+                div {
+                    class: "param-label",
+                    "fps: "
+                }
+                div {
+                    class: "param-value",
+                    "{fps}"
                 }
             }
             div {
