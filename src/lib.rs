@@ -24,6 +24,22 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use wasm_bindgen::prelude::*;
 
+static HELP: &[&str] = &[
+    "Particles are assigned two \"partners\" at random to follow. They will \
+     move to line up \"behind\" one partner on the line connecting the two \
+     partners. The particles are given random starting positions and colors. \
+     All randomness uses the given seed, so all simulations with the same \
+     seed, particle count, and acceleration limit will be identical. The \
+     range of randomly chosen colors for each particle can also be adjusted, \
+     but will not affect the simulation.",
+    "The simulation will run until the given frame limit is reached. The \
+     canvas can be saved as a PNG file at any time, and the paths of all \
+     particles can be saved as an SVG.",
+    "All of the configuration is saved in the URL, so you can save or share a \
+     configuration just by copying the URL, and use your browser's history to \
+     navigate between configurations as you change the parameters.",
+];
+
 #[wasm_bindgen(start)]
 fn start() -> Result<(), JsValue> {
     dioxus::logger::init(dioxus::logger::tracing::Level::DEBUG)
@@ -103,6 +119,7 @@ fn App() -> Element {
     let mut palette_image = use_signal(|| {
         Image::new(PALETTE_WIDTH, PALETTE_HEIGHT, Color::transparent())
     });
+    let mut show_help = use_signal(|| false);
 
     let config_str = move || {
         encode_config_str(Config {
@@ -296,6 +313,12 @@ fn App() -> Element {
             let blob = web_sys::Blob::new_with_str_sequence(&vec![svg].into())
                 .unwrap();
             download_blob(&document, &blob, &file_name);
+        });
+    });
+
+    let on_click_help = use_callback(move |_: Event<MouseData>| {
+        show_help.with_mut(|show_help| {
+            *show_help = !*show_help;
         });
     });
 
@@ -769,6 +792,26 @@ fn App() -> Element {
                 button {
                     onclick: on_click_save_svg,
                     "save svg"
+                }
+            }
+            div {
+                class: "control",
+                button {
+                    onclick: on_click_help,
+                    "help"
+                }
+            }
+        }
+        if *show_help.read() {
+            div {
+                class: "help",
+                h1 { "Followers" }
+                for line in HELP {
+                    p { {line} }
+                }
+                a {
+                    href: "https://github.com/dbeckwith/followers_",
+                    "Source code"
                 }
             }
         }

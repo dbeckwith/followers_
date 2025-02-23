@@ -18,6 +18,7 @@ body {
   font-style: normal;
   font-variation-settings: 'wdth' 100;
   text-rendering: optimizeLegibility;
+  font-size: 12px;
 
   color-scheme: light dark;
   color: #ddd;
@@ -59,9 +60,7 @@ canvas.world {
   flex-direction: column;
   gap: 4px;
 
-  font-size: 12px;
-
-  background-color: #0004;
+  background-color: #0008;
 }
 
 .param {
@@ -113,4 +112,24 @@ canvas.world {
 .control {
   display: flex;
   flex-direction: row;
+}
+
+.help {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  width: 30em;
+
+  border-radius: 8px;
+
+  padding: 8px;
+
+  background-color: #0008;
+}
+
+h1 {
+  font-size: 16px;
+  margin-block-start: 0;
 }
